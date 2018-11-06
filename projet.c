@@ -8,8 +8,6 @@ FONCTION DE PARSING DES COMMANDES
 
 
 #include "projet.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 Liste* initListe(){
 	/*
@@ -17,6 +15,7 @@ Liste* initListe(){
 	*/ 
 	Liste* l = (Liste*) malloc(sizeof(Liste));
 	l->premier = NULL;
+	l->nbIndividu = 0;
 	return l;
 }
 
@@ -197,6 +196,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 				return 3;
 			}
 		}
+		l->nbIndividu++;
 		remplacer->personne = i;
 	}
 	return 0;
@@ -288,6 +288,52 @@ void afficheArbre(Individu* i){
 		printf(")");
 	}
 }
+
+int in(char** dejaFait, char* prenom,int* taille){
+	printf("Debut du in %d:\n",*taille);
+	for (int i=0;i<*taille;i++){
+		printf("%s\n",dejaFait[i]);
+		if (estEgaleS(prenom,dejaFait[i])){
+			printf("Fin du in True\n");
+			return 1;
+		}
+	}
+	printf("Fin du in False\n");
+	return 0;
+}
+
+void saveFamille(FILE* fichier, Individu* i,char** dejaFait,int* taille){
+	if (i){
+		savePersonne(fichier,i,dejaFait,taille);
+		saveFamille(fichier,i->pere,dejaFait,taille);
+		saveFamille(fichier,i->mere,dejaFait,taille);
+	}
+}
+
+void savePersonne(FILE* fichier,Individu* i,char** dejaFait,int* taille){
+	if (!in(dejaFait,i->prenom,taille)){
+		if (!i->sexe){
+			fprintf(fichier,"%s:,%s,%s\n",i->prenom,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)));
+		}else {
+			fprintf(fichier,"%s:%c,%s,%s\n",i->prenom,i->sexe,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)));
+		}
+		dejaFait[(*taille)++] = i->prenom;
+	}
+}
+
+void save(Liste* l, char* nomFichier){
+	FILE* fichier = fopen(nomFichier,"w");
+	Element* rac = l->premier;
+	char** dejaFait = (char**) malloc(sizeof(char*)*l->nbIndividu);
+	int taille=0;
+	int* ptaille = &taille;
+	while (rac!=NULL){
+		saveFamille(fichier,rac->personne,dejaFait,ptaille);
+		rac=rac->suivant;
+	}
+	fclose(fichier);
+}
+
 void test(Liste* l, char* nom, char sexe, char* pere, char* mere){
 	/*
 	Fonction de test qui récupère les erreurs et les affiche dans la console
@@ -448,6 +494,8 @@ int main(int argc, char* argv[]){
 	test(l,"Gérard",'m',"Michel","Jeannine");
 	afficheListeChainee(l);
 	retrouveGParent(l,"Lucien");
-	printf("FIN\n");
+	printf("SAUVEGARDE\n");
+	save(l,"SAVE.txt");
+	printf("Fin de la sauvegarde");
 }
 

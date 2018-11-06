@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 typedef struct individu Individu;
 typedef struct element Element;
 typedef struct liste Liste;
@@ -18,6 +21,7 @@ struct element
 struct liste
 {
     	Element *premier;
+    	int nbIndividu;
 };
 
 Liste* initListe();
@@ -66,9 +70,10 @@ void retrouveGParent(Liste* l, char* prenom);
 
 void test(Liste* l, char* nom, char sexe, char* pere, char* mere);
 
+void save(Liste* l, char* nomFichier);
 
+void savePersonne(FILE* fichier,Individu* i,char** dejaFait,int* taille);
 
+void saveFamille(FILE* fichier, Individu* i,char** dejaFait,int* taille);
 
-
-
-
+int in(char** dejaFait, char* prenom,int* taille);
