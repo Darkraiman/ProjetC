@@ -119,11 +119,17 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 	if (!estSexeValide(sexe)){
 		return 1;
 	}
-	Individu* i = (Individu*) malloc(sizeof(Individu));
-	i->prenom = prenom;
-	i->sexe = sexe;
-	i->pere = NULL;
-	i->mere = NULL;
+	Individu* i;
+	printf("%s : resultat du test : %d\n",prenom,(cherche(l,prenom)?1:0));
+	int passe = 1;
+	if (!(i=cherche(l,prenom))){
+		i = (Individu*) malloc(sizeof(Individu));
+		i->prenom = prenom;
+		i->sexe = sexe;
+		i->pere = NULL;
+		i->mere = NULL;
+		passe = 0;
+	}
 	Individu* iPere = NULL;
 	Individu* iMere = NULL;
 	Element* rac = l->premier;
@@ -131,6 +137,8 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 	Element* prec = NULL;
 	Element* remplacer = NULL;
 	int trouve=0;
+	int trouvePere = 0;
+	int trouveMere = 0;
 	while (rac!=NULL && trouve!=2){
 		if (estEgaleS(rac->personne->prenom,pere)){
 				if (rac->personne->sexe=='m'|| rac->personne->sexe ==0){
@@ -142,6 +150,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 						aSupprimer = rac;
 					}
 					trouve++;
+					trouvePere++;
 				} else {
 					free(i);
 					return 2;
@@ -150,6 +159,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 			if (iPere->sexe == 'm'|| iPere->sexe == 0){
 				iPere->sexe = 'm';
 				i->pere = iPere;
+				trouvePere++;
 			} else {
 				free(i);
 				return 2;
@@ -165,6 +175,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 						aSupprimer = rac;
 					}
 					trouve++;
+					trouveMere++;
 				} else {
 					free(i);
 					return 2;
@@ -173,6 +184,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 			if (iMere->sexe == 'f'|| iMere->sexe == 0){
 				iMere->sexe = 'f';
 				i->mere = iMere;
+				trouveMere++;
 			} else {
 				free(i);
 				return 2;
@@ -181,14 +193,35 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 		prec = rac;
 		rac = rac->suivant;
 	}
+	if(!trouvePere && pere!=NULL){
+		Individu* nouveau = (Individu*) malloc(sizeof(Individu));
+		nouveau->prenom = pere;
+		nouveau->sexe = 'm';
+		nouveau->pere = NULL;
+		nouveau->mere = NULL;
+		i->pere = nouveau;
+		l->nbIndividu++;
+	}
+	if (!trouveMere && mere!=NULL){
+		Individu* nouveau = (Individu*) malloc(sizeof(Individu));
+		nouveau->prenom = mere;
+		nouveau->sexe = 'f';
+		nouveau->pere = NULL;
+		nouveau->mere = NULL;
+		i->mere = nouveau;
+		l->nbIndividu++;
+	}
 	if (!trouve){
-		Element* nouv = (Element*) malloc(sizeof(Element));
-		nouv->personne = i;
-		nouv->suivant = NULL;
-		if (prec){
-			prec->suivant = nouv;
-		} else {
-			l->premier = nouv;
+		if (!passe){
+			Element* nouv = (Element*) malloc(sizeof(Element));
+			nouv->personne = i;
+			nouv->suivant = NULL;
+			if (prec){
+				prec->suivant = nouv;
+			} else {
+				l->premier = nouv;
+			}
+			l->nbIndividu++;
 		}
 	} else {
 		if (aSupprimer){
@@ -334,6 +367,12 @@ void save(Liste* l, char* nomFichier){
 	fclose(fichier);
 }
 
+Liste* load(char* nomFichier){
+	FILE* fichier = fopen(nomFichier,"r");
+
+	fclose(fichier);
+}
+
 void test(Liste* l, char* nom, char sexe, char* pere, char* mere){
 	/*
 	Fonction de test qui récupère les erreurs et les affiche dans la console
@@ -460,6 +499,12 @@ int main(int argc, char* argv[]){
 	
 	Liste* l = initListe();
 	afficheListeChainee(l);
+	printf("Partie 6 : Ajout de Lucien : \n");
+	test(l,"Lucien",'m',"Raymond","Louise");
+	afficheListeChainee(l);
+	printf("Partie 8 : Ajout de Fernand : \n");
+	test(l,"Fernand",'m',"Raymond","Germaine");
+	afficheListeChainee(l);
 	printf("Partie 1 : Ajout de Gaston : \n");
 	test(l,"Gaston",'m',NULL,NULL);
 	afficheListeChainee(l);
@@ -475,14 +520,8 @@ int main(int argc, char* argv[]){
 	printf("Partie 5 : Ajout de Germaine : \n");
 	test(l,"Germaine",'f',NULL,NULL);
 	afficheListeChainee(l);
-	printf("Partie 6 : Ajout de Lucien : \n");
-	test(l,"Lucien",'m',"Raymond","Louise");
-	afficheListeChainee(l);
 	printf("Partie 7 : Ajout de Marie : \n");
 	test(l,"Marie",'f',"Raymond","Louise");
-	afficheListeChainee(l);
-	printf("Partie 8 : Ajout de Fernand : \n");
-	test(l,"Fernand",'m',"Raymond","Germaine");
 	afficheListeChainee(l);
 	printf("Partie 9 : Ajout de René : \n");
 	test(l,"René",'o',"Gaston","Augustine");
@@ -495,6 +534,7 @@ int main(int argc, char* argv[]){
 	afficheListeChainee(l);
 	retrouveGParent(l,"Lucien");
 	printf("SAUVEGARDE\n");
+	printf("TEST ERREUR : %d\n",l->nbIndividu);
 	save(l,"SAVE.txt");
 	printf("Fin de la sauvegarde");
 }
