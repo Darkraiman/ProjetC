@@ -1,7 +1,6 @@
 /*******
 TODO
 FONCTION ASCENDANTS ET EN DESSOUS
-FONCTION DE SAUVEGARDE ET DE LOAD
 FONCTION DE PARSING DES COMMANDES
 *******/
 
@@ -97,6 +96,69 @@ int estSexeValide(char sexe){
 	return (sexe == 'f' || sexe == 'm' || sexe == 0);
 }
 
+Liste* load(char* nomFichier){
+	/*
+	On lit une ligne du fichier par personne, et on l'ajoute à une liste. 
+	*/
+	int taille=100;
+	FILE* fichier = fopen(nomFichier,"r");
+	Liste* new=initListe();
+	if(fichier!=NULL){
+		char current=fgetc(fichier);
+		while(current!=EOF){
+			char *prenom=malloc(sizeof(char)*taille);
+			char *pere=malloc(sizeof(char)*taille);
+			char *mere=malloc(sizeof(char)*taille);
+			char sexe=0;
+			int i = 0;
+			while(current!=':'){
+				prenom[i++]=current;
+				current=fgetc(fichier);
+			}
+			prenom[i]='\0';
+			current=fgetc(fichier);
+			
+			//Lecture du sexe
+			while(current!=','){
+				sexe=current;
+				current=fgetc(fichier);
+			}
+			current=fgetc(fichier);
+			
+			//Lecture du père
+			i=0;
+			while(current!=','){
+				pere[i++]=current;
+				current=fgetc(fichier);
+			}
+			pere[i]='\0';
+			current=fgetc(fichier);
+			
+			//Lecture de la mère
+			i=0;
+			while(current!='\n'){
+				mere[i++]=current;
+				current=fgetc(fichier);
+			}
+			mere[i]='\0';
+			//Free
+			if(pere[0]=='\0'){
+				free(pere);
+				pere=NULL;
+			}
+			if(mere[0]=='\0'){
+				free(mere);
+				mere=NULL;
+			}
+			ajouter(new, prenom, sexe, pere, mere);
+			current = fgetc(fichier);
+		}
+	}
+	fclose(fichier);
+	
+	return new;
+}
+
 int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 	/*
 	Fonction permettant d'ajouter un nouveau membre de la famille
@@ -120,7 +182,6 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 		return 1;
 	}
 	Individu* i;
-	printf("%s : resultat du test : %d\n",prenom,(cherche(l,prenom)?1:0));
 	int passe = 1;
 	if (!(i=cherche(l,prenom))){
 		i = (Individu*) malloc(sizeof(Individu));
@@ -323,15 +384,11 @@ void afficheArbre(Individu* i){
 }
 
 int in(char** dejaFait, char* prenom,int* taille){
-	printf("Debut du in %d:\n",*taille);
 	for (int i=0;i<*taille;i++){
-		printf("%s\n",dejaFait[i]);
 		if (estEgaleS(prenom,dejaFait[i])){
-			printf("Fin du in True\n");
 			return 1;
 		}
 	}
-	printf("Fin du in False\n");
 	return 0;
 }
 
@@ -367,12 +424,6 @@ void save(Liste* l, char* nomFichier){
 	fclose(fichier);
 }
 
-Liste* load(char* nomFichier){
-	FILE* fichier = fopen(nomFichier,"r");
-
-	fclose(fichier);
-}
-
 void test(Liste* l, char* nom, char sexe, char* pere, char* mere){
 	/*
 	Fonction de test qui récupère les erreurs et les affiche dans la console
@@ -400,7 +451,6 @@ Individu* cherche(Liste* l,char* prenom){
 	*/
 	Element* rac = l->premier;
 	Individu* i = NULL;
-	int trouve = 0;
 	while (rac!=NULL){
 		if(estEgaleS(rac->personne->prenom,prenom)){
 			return rac->personne;
@@ -491,6 +541,107 @@ void retrouveGParent(Liste* l, char* prenom){
 	retrouveGMere(l,prenom);
 }
 
+void afficheAscendant(Individu* i){
+	if (!(i==NULL)){
+		printf("%s\n",i->prenom);
+		afficheAscendant(i->pere);
+		afficheAscendant(i->mere);
+	}
+}
+
+void ascendants(Liste* l, char* prenom){
+		Individu* i = cherche(l,prenom);
+		printf("Ces ascendants sont :\n");
+		afficheAscendant(i->pere);
+		afficheAscendant(i->mere);
+}
+
+
+int creeTEnfant(Individu* i,char* prenom,Individu** tab,int indice){
+	if (!(i==NULL)){
+		if (estEgaleS(((i->mere==NULL)?NULL:i->mere->prenom),prenom)){
+			tab[indice++] = i;
+			return indice;			
+		}
+		if (estEgaleS(((i->pere==NULL)?NULL:i->pere->prenom),prenom)){
+			tab[indice++] = i;
+			return indice;				
+		}
+		indice = creeTEnfant(i->mere,prenom,tab,indice);
+		indice = creeTEnfant(i->pere,prenom,tab,indice);
+		return indice;
+	}
+	return indice;
+}
+
+void afficheTab(Individu** tab,int ind){
+	for (int i=0;i<ind;i++){
+		printf("%s\n",tab[i]->prenom);
+	}
+}
+
+void enfants(Liste* l, char* prenom){
+	Element* rac = l->premier;
+	printf("Enfants :\n");
+	Individu* tab[100];
+	int indice = 0;
+	while(rac!=NULL){
+		indice = creeTEnfant(rac->personne,prenom,tab,indice);
+		rac = rac->suivant;
+	}
+	afficheTab(tab,indice);
+}
+
+
+
+void petitsEnfants(Liste* l, char* prenom){
+	Element* rac = l->premier;
+	printf("Enfants :\n");
+	Individu* tab[100];
+	int indice = 0;
+	while(rac!=NULL){
+		indice = creeTEnfant(rac->personne,prenom,tab,indice);
+		rac = rac->suivant;
+	}
+	afficheTab(tab,indice);
+	for (int i=0;i<indice;i++){
+		enfants(l,tab[i]->prenom);
+	
+	}
+}
+/*
+void descendants(Liste* l, char* prenom){
+	
+}
+
+void partenaires(Liste* l, char* prenom){
+	
+}
+
+void freres(Liste* l, char* prenom){
+	
+}
+
+void soeurs(Liste* l, char* prenom){
+	
+}
+
+void demifreres(Liste* l, char* prenom){
+	
+}
+
+void demisoeurs(Liste* l, char* prenom){
+	
+}
+
+void oncle(Liste* l, char* prenom){
+	
+}
+
+void cousins(Liste* l, char* prenom){
+	
+}
+*/
 
 int main(int argc, char* argv[]){
 	/*
@@ -498,6 +649,8 @@ int main(int argc, char* argv[]){
 	*/
 	
 	Liste* l = initListe();
+	l=load("SAVE.txt");
+	/*
 	afficheListeChainee(l);
 	printf("Partie 6 : Ajout de Lucien : \n");
 	test(l,"Lucien",'m',"Raymond","Louise");
@@ -532,10 +685,12 @@ int main(int argc, char* argv[]){
 	printf("Partie 11 : Ajout de Gerard : \n");
 	test(l,"Gérard",'m',"Michel","Jeannine");
 	afficheListeChainee(l);
-	retrouveGParent(l,"Lucien");
-	printf("SAUVEGARDE\n");
+	*/
+	enfants(l,"Lucien");
+	/*printf("SAUVEGARDE\n");
 	printf("TEST ERREUR : %d\n",l->nbIndividu);
 	save(l,"SAVE.txt");
 	printf("Fin de la sauvegarde");
+	*/
 }
 
