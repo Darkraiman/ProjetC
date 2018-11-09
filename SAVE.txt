@@ -1,0 +1,15 @@
+Lucien:m,Raymond,Louise
+Raymond:m,Gaston,Augustine
+Gaston:m,,
+Augustine:f,,
+Louise:f,,
+Fernand:m,Raymond,Germaine
+Germaine:f,,
+Marie:f,Raymond,Louise
+Gérard:m,Michel,Jeannine
+Michel:m,,
+Jeannine:f,,
+Mireille:f,Raymond,Jeannine
+Paul:m,Gaston,Augustine
+Thierry:m,Michel,Ludivine
+Ludivine:f,Gaston,Augustine

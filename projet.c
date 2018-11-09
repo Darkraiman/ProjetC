@@ -1,17 +1,18 @@
 /*******
 TODO
-FONCTION ASCENDANTS ET EN DESSOUS
 FONCTION DE PARSING DES COMMANDES
+OPTIMISER LES MALLOCS ET LES CREATIONS DE TABLEAU AFIN QUE LA TAILLE LIMITE SOIT LA RAM
+METTRE LES FONCTIONS QUI NE SONT PAS ENCORE DANS LE H DANS LE H
 *******/
 
 
 
 #include "projet.h"
-
+#define TAILLE_MINI 100
 Liste* initListe(){
 	/*
 	Initialise la liste chainée qui contiendra l'arbre généalogique
-	*/ 
+	*/
 	Liste* l = (Liste*) malloc(sizeof(Liste));
 	l->premier = NULL;
 	l->nbIndividu = 0;
@@ -48,7 +49,7 @@ char EnMaj(char c){
 	/*
 	Fonction renvoyant le caractère passé en paramètre en majuscule
 	*/
-	return (c>='a' && c<='z'?c-'a'+'A':c);	
+	return (c>='a' && c<='z'?c-'a'+'A':c);
 }
 
 int estEgaleS(char* ch1, char* ch2){
@@ -89,7 +90,7 @@ int estEgaleI2(Individu* i, char* ch){
 }
 
 int estSexeValide(char sexe){
-	/* 
+	/*
 	Fonction permettant de tester si le sexe donné est valide
 	1 si oui 0 si non
 	*/
@@ -98,17 +99,16 @@ int estSexeValide(char sexe){
 
 Liste* load(char* nomFichier){
 	/*
-	On lit une ligne du fichier par personne, et on l'ajoute à une liste. 
+	On lit une ligne du fichier par personne, et on l'ajoute à une liste.
 	*/
-	int taille=100;
 	FILE* fichier = fopen(nomFichier,"r");
 	Liste* new=initListe();
 	if(fichier!=NULL){
 		char current=fgetc(fichier);
 		while(current!=EOF){
-			char *prenom=malloc(sizeof(char)*taille);
-			char *pere=malloc(sizeof(char)*taille);
-			char *mere=malloc(sizeof(char)*taille);
+			char *prenom=malloc(sizeof(char)*TAILLE_MINI);
+			char *pere=malloc(sizeof(char)*TAILLE_MINI);
+			char *mere=malloc(sizeof(char)*TAILLE_MINI);
 			char sexe=0;
 			int i = 0;
 			while(current!=':'){
@@ -117,14 +117,14 @@ Liste* load(char* nomFichier){
 			}
 			prenom[i]='\0';
 			current=fgetc(fichier);
-			
+
 			//Lecture du sexe
 			while(current!=','){
 				sexe=current;
 				current=fgetc(fichier);
 			}
 			current=fgetc(fichier);
-			
+
 			//Lecture du père
 			i=0;
 			while(current!=','){
@@ -133,7 +133,7 @@ Liste* load(char* nomFichier){
 			}
 			pere[i]='\0';
 			current=fgetc(fichier);
-			
+
 			//Lecture de la mère
 			i=0;
 			while(current!='\n'){
@@ -155,14 +155,14 @@ Liste* load(char* nomFichier){
 		}
 	}
 	fclose(fichier);
-	
+
 	return new;
 }
 
 int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 	/*
 	Fonction permettant d'ajouter un nouveau membre de la famille
-	
+
 	Elle consiste en 4 questions dans une boucle qui fouille la liste chainée :
 		1) est ce que la personne actuel est le pere (l'element en cours de la liste chainée)
 		2) si non est ce qu'un membre de sa famille est le pere
@@ -173,7 +173,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 	(supprime l'element en trop si le pere ET la mere sont dans la liste chainée)
 
 	Renvoie 0 si tout s'est bien passé.
-	CODE D'ERREUR DE LA FONCTION : 
+	CODE D'ERREUR DE LA FONCTION :
 	1 si le sexe donné n'est pas valide
 	2 si la personne correspondant au nom donné n'est pas du sexe attendu (ex : mere qui serait de sexe m)
 	3 si il ya un probleme dans la suppresion (l'element n'existe pas) (/!\ ne devrait jamais arriver)
@@ -352,7 +352,7 @@ int supprimer(Liste* l, Element* e){
 void afficheListeChainee(Liste* l){
 	/*
 	Fonction d'affichage entière de la liste chainée passé en paramètre
-	L'affichage est de la forme : 
+	L'affichage est de la forme :
 	(Debut) - (ELEMENT) - (ELEMENT) - (NULL)
 	*/
 	Element* rac = l->premier;
@@ -383,7 +383,7 @@ void afficheArbre(Individu* i){
 	}
 }
 
-int in(char** dejaFait, char* prenom,int* taille){
+int inChar(char** dejaFait, char* prenom,int* taille){
 	for (int i=0;i<*taille;i++){
 		if (estEgaleS(prenom,dejaFait[i])){
 			return 1;
@@ -392,6 +392,14 @@ int in(char** dejaFait, char* prenom,int* taille){
 	return 0;
 }
 
+int inIndividu(Individu** tab, char* prenom,int taille){
+	for (int i=0;i<taille;i++){
+		if (estEgaleS(prenom,tab[i]->prenom)){
+			return 1;
+		}
+	}
+	return 0;
+}
 void saveFamille(FILE* fichier, Individu* i,char** dejaFait,int* taille){
 	if (i){
 		savePersonne(fichier,i,dejaFait,taille);
@@ -401,7 +409,7 @@ void saveFamille(FILE* fichier, Individu* i,char** dejaFait,int* taille){
 }
 
 void savePersonne(FILE* fichier,Individu* i,char** dejaFait,int* taille){
-	if (!in(dejaFait,i->prenom,taille)){
+	if (!inChar(dejaFait,i->prenom,taille)){
 		if (!i->sexe){
 			fprintf(fichier,"%s:,%s,%s\n",i->prenom,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)));
 		}else {
@@ -560,12 +568,16 @@ void ascendants(Liste* l, char* prenom){
 int creeTEnfant(Individu* i,char* prenom,Individu** tab,int indice){
 	if (!(i==NULL)){
 		if (estEgaleS(((i->mere==NULL)?NULL:i->mere->prenom),prenom)){
-			tab[indice++] = i;
-			return indice;			
+			if (!inIndividu(tab,i->prenom,indice)){
+				tab[indice++] = i;
+			}
+			return indice;
 		}
 		if (estEgaleS(((i->pere==NULL)?NULL:i->pere->prenom),prenom)){
-			tab[indice++] = i;
-			return indice;				
+			if (!inIndividu(tab,i->prenom,indice)){
+				tab[indice++] = i;
+			}
+			return indice;
 		}
 		indice = creeTEnfant(i->mere,prenom,tab,indice);
 		indice = creeTEnfant(i->pere,prenom,tab,indice);
@@ -580,117 +592,310 @@ void afficheTab(Individu** tab,int ind){
 	}
 }
 
-void enfants(Liste* l, char* prenom){
+void enfants(Liste* l, char* prenom, int option1){
 	Element* rac = l->premier;
-	printf("Enfants :\n");
-	Individu* tab[100];
+	Individu* tab[TAILLE_MINI];
+	if (option1){
+		printf("Enfant de %s :\n",prenom);
+	}
 	int indice = 0;
 	while(rac!=NULL){
 		indice = creeTEnfant(rac->personne,prenom,tab,indice);
 		rac = rac->suivant;
 	}
-	afficheTab(tab,indice);
+	if (!indice){
+		printf("Pas d'enfants !\n");
+	}else {
+		afficheTab(tab,indice);
+	}
 }
 
 
 
 void petitsEnfants(Liste* l, char* prenom){
 	Element* rac = l->premier;
-	printf("Enfants :\n");
-	Individu* tab[100];
+	printf("Petit(s) enfant(s) de %s:\n",prenom);
+	Individu* tab[TAILLE_MINI];
 	int indice = 0;
 	while(rac!=NULL){
 		indice = creeTEnfant(rac->personne,prenom,tab,indice);
 		rac = rac->suivant;
 	}
-	afficheTab(tab,indice);
-	for (int i=0;i<indice;i++){
-		enfants(l,tab[i]->prenom);
-	
+	Individu* tab2[TAILLE_MINI];
+	indice=0;
+	for (int i = 0;i<indice;i++){
+		indice = creeTEnfant(tab[i],tab[i]->prenom,tab2,indice);
+	}
+	if (!indice){
+		printf("Pas de petits enfants !\n");
+	}else {
+		afficheTab(tab2,indice);
 	}
 }
-/*
-void descendants(Liste* l, char* prenom){
-	
+int creeTDescendant(Individu* i, char* prenom, Individu** tab, int indice){
+    if (!(i==NULL)){
+		if (estDansFamille(i,prenom)){
+			if (!inIndividu(tab,i->prenom,indice)){
+				tab[indice++] = i;
+			}
+		}
+		indice = creeTDescendant(i->mere,prenom,tab,indice);
+		indice = creeTDescendant(i->pere,prenom,tab,indice);
+		return indice;
+	}
+	return indice;
 }
+
+void descendants(Liste* l, char* prenom){
+	Element* rac = l->premier;
+	Individu* tab[TAILLE_MINI];
+	int indice = 0;
+	while(rac!=NULL){
+		indice = creeTDescendant(rac->personne,prenom,tab,indice);
+		rac = rac->suivant;
+	}
+	printf("Descendants de %s\n",prenom);
+	if (indice){
+        afficheTab(tab,indice);
+	} else {
+        printf("Pas de descendants !\n");
+    }
+}
+
 
 void partenaires(Liste* l, char* prenom){
-	
+    Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        Element* rac = l->premier;
+        Individu* tab[TAILLE_MINI];
+        int indice = 0;
+        char sexe = test->sexe;
+        while(rac!=NULL){
+            indice = creeTEnfant(rac->personne,prenom,tab,indice);
+            rac = rac->suivant;
+        }
+        printf("Partenaire(s) de %s :\n",prenom);
+        Individu* dejaFait[TAILLE_MINI];
+        int indDejaFait = 0;
+        if (indice){
+            if (sexe=='m'){
+                for (int i = 0;i<indice;i++){
+                    if (!(inIndividu(dejaFait,tab[i]->mere->prenom,indDejaFait))){
+                        printf("%s\n",tab[i]->mere->prenom);
+                        dejaFait[indDejaFait++]=tab[i]->mere;
+                    }
+                }
+            } else {
+                for (int i = 0;i<indice;i++){
+                    if (!(inIndividu(dejaFait,tab[i]->pere->prenom,indDejaFait))){
+                        printf("%s\n",tab[i]->pere->prenom);
+                        dejaFait[indDejaFait++]=tab[i]->pere;
+                    }
+                }
+            }
+        } else {
+            printf("Pas de partenaires connus !\n");
+        }
+    }
+}
+int supprimeTab(Individu** tab,int indiceASupp,int taille){
+    tab[indiceASupp] = tab[taille-1];
+    tab[taille-1] = NULL;
+    return taille-1;
 }
 
-void freres(Liste* l, char* prenom){
-	
+int creeTAffilie(Liste* l, char* prenom, Individu** tab, int indice,char sexe,int demi){
+    Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        Individu* i;
+        char* prenomMDemi;
+        if (demi){
+            Individu* iM;
+            iM = test->mere;
+            if (iM){
+                prenomMDemi = iM->prenom;
+            }
+            i = test->pere;
+        } else {
+            i = test->mere;
+        }
+        if (i){
+            Element* rac = l->premier;
+            int indice = 0;
+            char* prenomM = i->prenom;
+            while(rac!=NULL){
+                indice = creeTEnfant(rac->personne,prenomM,tab,indice);
+                rac = rac->suivant;
+            }
+            for (int i=0;i<indice;i++){
+                if (tab[i]->sexe != sexe || estEgaleS(prenom,tab[i]->prenom) || (estEgaleS(prenomMDemi,tab[i]->mere->prenom)&&demi)){
+                    indice=supprimeTab(tab,i,indice);
+                    i--;
+                }
+            }
+            return indice;
+        } else {
+            return 0;
+        }
+    }
 }
 
-void soeurs(Liste* l, char* prenom){
-	
+void affilie(Liste* l, char* prenom,char sexe,int demi){
+    if (demi){
+        if (sexe=='m'){
+            printf("Demi-frere(s) ");
+        } else {
+            printf("Demi-soeur(s) ");
+        }
+    } else {
+        if (sexe=='m'){
+            printf("Frere(s) ");
+        } else {
+            printf("Soeur(s) ");
+        }
+    }
+    printf("de %s : \n",prenom);
+    Individu* tab[TAILLE_MINI];
+    int cptG=0;
+    cptG = creeTAffilie(l,prenom,tab,cptG,sexe,demi);
+    if (!cptG){
+        if (demi){
+            if (sexe=='m'){
+                printf("Pas de demi-freres connus !\n");
+            } else {
+                printf("Pas de demi-soeurs connus !\n");
+            }
+        } else {
+            if (sexe=='m'){
+                printf("Pas de freres connus !\n");
+            } else {
+                printf("Pas de soeurs connus !\n");
+            }
+        }
+    } else {
+        afficheTab(tab,cptG);
+    }
+}
+int creeTAffilieParent(Liste* l,Individu* test,Individu** tab,int indice,char sexe){
+    Individu* iP = test->mere;
+    Individu* iM = test->pere;
+    if (iP){
+        indice = creeTAffilie(l,iP->prenom,tab,indice,sexe,0);
+    }
+    if (iM){
+        indice = creeTAffilie(l,iM->prenom,tab,indice,sexe,0);
+    }
+    return indice;
 }
 
-void demifreres(Liste* l, char* prenom){
-	
-}
-
-void demisoeurs(Liste* l, char* prenom){
-	
-}
-
-void oncle(Liste* l, char* prenom){
-	
+void affilieParent(Liste* l, char* prenom,char sexe){
+    Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        if (sexe=='m'){
+            printf("Oncle(s) de %s : \n",prenom);
+        } else {
+            printf("Tante(s) de %s : \n",prenom);
+        }
+        int indice = 0;
+        Individu* tab[TAILLE_MINI];
+        indice = creeTAffilieParent(l,test,tab,indice,sexe);
+        if (!indice){
+            if (sexe=='m'){
+                printf("Pas d'oncles !\n");
+            } else {
+                printf("Pas de tantes !\n");
+            }
+        } else {
+            afficheTab(tab,indice);
+        }
+    }
 }
 
 void cousins(Liste* l, char* prenom){
-	
+    Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        printf("Cousins : \n");
+        Individu* affilieP[TAILLE_MINI];
+        int indiceP = 0;
+        indiceP = creeTAffilieParent(l,test,affilieP,indiceP,'m');
+        indiceP = creeTAffilieParent(l,test,affilieP,indiceP,'f');
+        Individu* cousin[TAILLE_MINI];
+        int indiceC = 0;
+        for (int i =0;i<indiceP;i++){
+            Element* rac = l->premier;
+            while(rac!=NULL){
+                indiceC = creeTEnfant(rac->personne,affilieP[i]->prenom,cousin,indiceC);
+                rac=rac->suivant;
+            }
+        }
+        if (indiceC){
+            afficheTab(cousin,indiceC);
+        }else{
+            printf("Pas de cousins !\n");
+        }
+
+    }
 }
-*/
 
 int main(int argc, char* argv[]){
 	/*
 	Fonction principal du module
 	*/
-	
+
 	Liste* l = initListe();
-	l=load("SAVE.txt");
-	/*
-	afficheListeChainee(l);
-	printf("Partie 6 : Ajout de Lucien : \n");
+	//l=load("SAVE.txt");
 	test(l,"Lucien",'m',"Raymond","Louise");
-	afficheListeChainee(l);
-	printf("Partie 8 : Ajout de Fernand : \n");
 	test(l,"Fernand",'m',"Raymond","Germaine");
-	afficheListeChainee(l);
-	printf("Partie 1 : Ajout de Gaston : \n");
 	test(l,"Gaston",'m',NULL,NULL);
-	afficheListeChainee(l);
-	printf("Partie 2 : Ajout de Augustine : \n");
 	test(l,"Augustine",0,NULL,NULL);
-	afficheListeChainee(l);
-	printf("Partie 3 : Ajout de Raymond : \n");
 	test(l,"Raymond",'m',"Gaston","Augustine");
-	afficheListeChainee(l);
-	printf("Partie 4 : Ajout de Louise : \n");
 	test(l,"Louise",'f',NULL,NULL);
-	afficheListeChainee(l);
-	printf("Partie 5 : Ajout de Germaine : \n");
 	test(l,"Germaine",'f',NULL,NULL);
-	afficheListeChainee(l);
-	printf("Partie 7 : Ajout de Marie : \n");
 	test(l,"Marie",'f',"Raymond","Louise");
-	afficheListeChainee(l);
-	printf("Partie 9 : Ajout de René : \n");
 	test(l,"René",'o',"Gaston","Augustine");
-	afficheListeChainee(l);
-	printf("Partie 10 : Ajout de Paul : \n");
 	test(l,"Paul",'m',"Louise","Augustine");
-	afficheListeChainee(l);
-	printf("Partie 11 : Ajout de Gerard : \n");
 	test(l,"Gérard",'m',"Michel","Jeannine");
+	test(l,"Mireille",'f',"Raymond","Jeannine");
+	test(l,"Paul",'m',"Gaston","Augustine");
+	test(l,"Ludivine",'f',"Gaston","Augustine");
+	test(l,"Thierry",'m',"Michel","Ludivine");
 	afficheListeChainee(l);
-	*/
-	enfants(l,"Lucien");
-	/*printf("SAUVEGARDE\n");
-	printf("TEST ERREUR : %d\n",l->nbIndividu);
+	printf("SAUVEGARDE\n");
 	save(l,"SAVE.txt");
-	printf("Fin de la sauvegarde");
-	*/
+	printf("Fin de la sauvegarde\n");
+	petitsEnfants(l,"Lucien");
+	petitsEnfants(l,"Gaston");
+	enfants(l,"Raymond",1);
+	enfants(l,"Lucien",1);
+	descendants(l,"Louise");
+	descendants(l,"Lucien");
+	partenaires(l,"Lucien");
+	partenaires(l,"Raymond");
+	partenaires(l,"Augustine");
+	affilie(l,"Lucien",'m',0);
+	affilie(l,"Marie",'m',0);
+	affilie(l,"Lucien",'f',0);
+	affilie(l,"Marie",'f',0);
+	affilie(l,"Lucien",'m',1);
+	affilie(l,"Marie",'m',1);
+	affilie(l,"Lucien",'f',1);
+	affilie(l,"Marie",'f',1);
+	affilie(l,"Gaston",'f',1);
+	affilie(l,"Gaston",'m',1);
+	affilieParent(l,"Lucien",'m');
+	affilieParent(l,"Lucien",'f');
+	affilieParent(l,"Marie",'m');
+	affilieParent(l,"Marie",'f');
+	affilieParent(l,"Gaston",'m');
+	affilieParent(l,"Gaston",'f');
+	cousins(l,"Lucien");
 }
 
