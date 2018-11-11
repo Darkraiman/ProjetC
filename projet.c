@@ -1,14 +1,13 @@
 /*******
 TODO
-FONCTION DE PARSING DES COMMANDES
 OPTIMISER LES MALLOCS ET LES CREATIONS DE TABLEAU AFIN QUE LA TAILLE LIMITE SOIT LA RAM
-METTRE LES FONCTIONS QUI NE SONT PAS ENCORE DANS LE H DANS LE H
+GERER LES CAS STUPIDES
+FAIRE LA DOC POUR LES FONCTIONS DONT JE NE LAI PAS ENCORE FAIT
 *******/
-
-
 
 #include "projet.h"
 #define TAILLE_MINI 100
+
 Liste* initListe(){
 	/*
 	Initialise la liste chainée qui contiendra l'arbre généalogique
@@ -213,7 +212,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 					trouve++;
 					trouvePere++;
 				} else {
-					free(i);
+					//free(i);
 					return 2;
 				}
 		} else if (iPere = estDansFamille(rac->personne,pere)) {
@@ -222,7 +221,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 				i->pere = iPere;
 				trouvePere++;
 			} else {
-				free(i);
+				//free(i);
 				return 2;
 			}
 		}
@@ -238,7 +237,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 					trouve++;
 					trouveMere++;
 				} else {
-					free(i);
+					//free(i);
 					return 2;
 				}
 		} else if (iMere = estDansFamille(rac->personne,mere)) {
@@ -247,7 +246,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 				i->mere = iMere;
 				trouveMere++;
 			} else {
-				free(i);
+				//free(i);
 				return 2;
 			}
 		}
@@ -430,6 +429,36 @@ void save(Liste* l, char* nomFichier){
 		rac=rac->suivant;
 	}
 	fclose(fichier);
+}
+
+void viewPersonne(Individu* i,char** dejaFait,int* taille){
+	if (!inChar(dejaFait,i->prenom,taille)){
+		if (!i->sexe){
+			printf("%s:,%s,%s\n",i->prenom,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)));
+		}else {
+			printf("%s:%c,%s,%s\n",i->prenom,i->sexe,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)));
+		}
+		dejaFait[(*taille)++] = i->prenom;
+	}
+}
+
+void viewFamille(Individu* i,char** dejaFait,int* taille){
+	if (i){
+		viewPersonne(i,dejaFait,taille);
+		viewFamille(i->pere,dejaFait,taille);
+		viewFamille(i->mere,dejaFait,taille);
+	}
+}
+
+void view(Liste* l){
+    Element* rac = l->premier;
+	char** dejaFait = (char**) malloc(sizeof(char*) * l->nbIndividu);
+	int taille=0;
+	int* ptaille = &taille;
+	while (rac!=NULL){
+		viewFamille(rac->personne,dejaFait,ptaille);
+		rac=rac->suivant;
+	}
 }
 
 void test(Liste* l, char* nom, char sexe, char* pere, char* mere){
@@ -615,21 +644,25 @@ void enfants(Liste* l, char* prenom, int option1){
 void petitsEnfants(Liste* l, char* prenom){
 	Element* rac = l->premier;
 	printf("Petit(s) enfant(s) de %s:\n",prenom);
-	Individu* tab[TAILLE_MINI];
+	Individu** tab = (Individu**) malloc(sizeof(Individu*)*TAILLE_MINI);
 	int indice = 0;
 	while(rac!=NULL){
 		indice = creeTEnfant(rac->personne,prenom,tab,indice);
 		rac = rac->suivant;
 	}
-	Individu* tab2[TAILLE_MINI];
-	indice=0;
-	for (int i = 0;i<indice;i++){
-		indice = creeTEnfant(tab[i],tab[i]->prenom,tab2,indice);
-	}
-	if (!indice){
+	Individu** tab2 = (Individu**) malloc(sizeof(Individu*)*TAILLE_MINI);
+	int indice2=0;
+	for (int i =0;i<indice;i++){
+        Element* rac = l->premier;
+        while(rac!=NULL){
+            indice2 = creeTEnfant(rac->personne,tab[i]->prenom,tab2,indice2);
+            rac=rac->suivant;
+        }
+    }
+	if (!indice2){
 		printf("Pas de petits enfants !\n");
 	}else {
-		afficheTab(tab2,indice);
+		afficheTab(tab2,indice2);
 	}
 }
 int creeTDescendant(Individu* i, char* prenom, Individu** tab, int indice){
@@ -845,57 +878,237 @@ void cousins(Liste* l, char* prenom){
     }
 }
 
+void viderBuffer(){
+  int c;
+  while((c=getchar()) != EOF && c != '\n');
+}
+
+int lanceCommande(Liste** l,char* fonction, char* parametre){
+    if (estEgaleS(fonction,"load")){
+        if(!strlen(parametre)) {
+            printf("La fonction load necessite un paramètre qui correspond au fichier dans lequel se trouve la famille.\n");
+        } else {
+            *l = load(parametre);
+        }
+    } else if (estEgaleS(fonction,"save")){
+        if(!strlen(parametre)) {
+            printf("La fonction save necessite un paramètre qui correspond au fichier dans lequel la famille sera enregistré.\n");
+        } else {
+            save(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"view")){
+        view(*l);
+    } else if (estEgaleS(fonction,"exit")){
+        return 1;
+    } else if (estEgaleS(fonction,"new")){
+        if(!strlen(parametre)) {
+            printf("La fonction new necessite au moins un paramètre prénom et au plus 4 paramètre qui sont prenom, sexe , pere , mere dans cette ordre.\n");
+        } else {
+
+            char* prenom = (char*) malloc(sizeof(char)*100);
+            char sexe;
+            char* pere;
+            char* mere;
+            int taillemax = strlen(parametre);
+            int indCha = 0;
+            int ind = 0;
+            while (ind<taillemax && parametre[ind] != ','){
+                prenom[indCha++]=parametre[ind++];
+            }
+            prenom[indCha]='\0';
+            if (ind>=taillemax){
+                test(*l,prenom,0,NULL,NULL);
+                return 0;
+            }
+            ind++;
+            if (!(parametre[ind]==',')){
+                sexe = parametre[ind++];
+                ind++;
+            } else {
+                sexe = 0;
+                ind++;
+            }
+            indCha = 0;
+            if (!(parametre[ind]==',')){
+                pere = (char*) malloc(sizeof(char)*100);
+                while (ind<taillemax && parametre[ind] != ','){
+                    pere[indCha++]=parametre[ind++];
+                }
+                pere[indCha]='\0';
+            } else {
+                pere = NULL;
+            }
+            ind++;
+            indCha = 0;
+            if (ind == taillemax||parametre[ind]==','){
+                mere = NULL;
+            } else {
+                mere = (char*) malloc(sizeof(char)*100);
+                while (ind<taillemax && parametre[ind] != ','){
+                    mere[indCha++]=parametre[ind++];
+                }
+                mere[indCha]='\0';
+            }
+            test(*l,prenom,sexe,pere,mere);
+        }
+    } else if (estEgaleS(fonction,"info")){
+        if(!strlen(parametre)) {
+            printf("La fonction info necessite un paramètre qui correspond la personne pour lequel on recherche les infos.\n");
+        } else {
+            afficheInfoS(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"mere")){
+        if(!strlen(parametre)) {
+            printf("La fonction mere necessite un paramètre qui correspond la personne pour lequel on recherche la mere.\n");
+        } else {
+            retrouveMere(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"pere")){
+        if(!strlen(parametre)) {
+            printf("La fonction pere necessite un paramètre qui correspond la personne pour lequel on recherche le pere.\n");
+        } else {
+            retrouvePere(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"parents")){
+        if(!strlen(parametre)) {
+            printf("La fonction parents necessite un paramètre qui correspond la personne pour lequel on recherche les parents.\n");
+        } else {
+            retrouveParent(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"gdmeres")){
+        if(!strlen(parametre)) {
+            printf("La fonction gdmeres necessite un paramètre qui correspond la personne pour lequel on recherche les grands meres.\n");
+        } else {
+            retrouveGMere(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"gdperes")){
+        if(!strlen(parametre)) {
+            printf("La fonction gdperes necessite un paramètre qui correspond la personne pour lequel on recherche les grands peres.\n");
+        } else {
+            retrouveGPere(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"gdparents")){
+        if(!strlen(parametre)) {
+            printf("La fonction gdparents necessite un paramètre qui correspond la personne pour lequel on recherche les grands parents.\n");
+        } else {
+            retrouveGParent(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"ascendants")){
+        if(!strlen(parametre)) {
+            printf("La fonction ascendants necessite un paramètre qui correspond la personne pour lequel on recherche les ascendants.\n");
+        } else {
+            ascendants(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"enfants")){
+        if(!strlen(parametre)) {
+            printf("La fonction enfants necessite un paramètre qui correspond la personne pour lequel on recherche les enfants.\n");
+        } else {
+            enfants(*l,parametre,1);
+        }
+    } else if (estEgaleS(fonction,"petitsenfants")){
+        if(!strlen(parametre)) {
+            printf("La fonction petitsenfants necessite un paramètre qui correspond la personne pour lequel on recherche les petits enfants.\n");
+        } else {
+            petitsEnfants(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"descendants")){
+        if(!strlen(parametre)) {
+            printf("La fonction descendants necessite un paramètre qui correspond la personne pour lequel on recherche les descendants.\n");
+        } else {
+            descendants(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"partenaires")){
+        if(!strlen(parametre)) {
+            printf("La fonction partenaires necessite un paramètre qui correspond la personne pour lequel on recherche les partenaires.\n");
+        } else {
+            partenaires(*l,parametre);
+        }
+    } else if (estEgaleS(fonction,"freres")){
+        if(!strlen(parametre)) {
+            printf("La fonction freres necessite un paramètre qui correspond la personne pour lequel on recherche les freres.\n");
+        } else {
+            affilie(*l,parametre,'m',0);
+        }
+    } else if (estEgaleS(fonction,"soeurs")){
+        if(!strlen(parametre)) {
+            printf("La fonction soeurs necessite un paramètre qui correspond la personne pour lequel on recherche les soeurs.\n");
+        } else {
+            affilie(*l,parametre,'f',0);
+        }
+    } else if (estEgaleS(fonction,"demifreres")){
+        if(!strlen(parametre)) {
+            printf("La fonction demifreres necessite un paramètre qui correspond la personne pour lequel on recherche les demi freres.\n");
+        } else {
+            affilie(*l,parametre,'m',1);
+        }
+    } else if (estEgaleS(fonction,"demisoeurs")){
+        if(!strlen(parametre)) {
+            printf("La fonction demisoeurs necessite un paramètre qui correspond la personne pour lequel on recherche les demisoeurs.\n");
+        } else {
+            affilie(*l,parametre,'f',1);
+        }
+    } else if (estEgaleS(fonction,"oncles")){
+        if(!strlen(parametre)) {
+            printf("La fonction oncles necessite un paramètre qui correspond la personne pour lequel on recherche les oncles.\n");
+        } else {
+            affilieParent(*l,parametre,'m');
+        }
+    } else if (estEgaleS(fonction,"tantes")){
+        if(!strlen(parametre)) {
+            printf("La fonction tantes necessite un paramètre qui correspond la personne pour lequel on recherche les tantes.\n");
+        } else {
+            affilieParent(*l,parametre,'f');
+        }
+    } else if (estEgaleS(fonction,"cousins")){
+        if(!strlen(parametre)) {
+            printf("La fonction cousins necessite un paramètre qui correspond la personne pour lequel on recherche les cousins.\n");
+        } else {
+            cousins(*l,parametre);
+        }
+    } else {
+        printf("La commande n'existe pas !");
+    }
+    return 0;
+}
+
+int parseCommande(Liste** l){
+    printf("> ");
+    char buffer[100];
+    char fonction[14];
+    char parametre[100];
+    scanf("%s",buffer);
+    viderBuffer();
+    int tailleEntree = strlen(buffer);
+    int indBuffer=0;
+    int indCha = 0;
+    while (indBuffer<tailleEntree&&buffer[indBuffer]!='('){
+        if (indCha<13){
+            fonction[indCha++]=buffer[indBuffer];
+        }
+        indBuffer++;
+    }
+    fonction[indCha]='\0';
+    indBuffer++;
+    indCha = 0;
+    while(indBuffer<tailleEntree-1 && buffer[indBuffer]!=')'){
+        parametre[indCha]=buffer[indBuffer];
+        indBuffer++;
+        indCha++;
+    }
+    parametre[indCha]='\0';
+    printf("Fonction %s (%s)\n",fonction,parametre);
+    return lanceCommande(l,fonction,parametre);
+}
+
 int main(int argc, char* argv[]){
 	/*
 	Fonction principal du module
 	*/
-
 	Liste* l = initListe();
-	//l=load("SAVE.txt");
-	test(l,"Lucien",'m',"Raymond","Louise");
-	test(l,"Fernand",'m',"Raymond","Germaine");
-	test(l,"Gaston",'m',NULL,NULL);
-	test(l,"Augustine",0,NULL,NULL);
-	test(l,"Raymond",'m',"Gaston","Augustine");
-	test(l,"Louise",'f',NULL,NULL);
-	test(l,"Germaine",'f',NULL,NULL);
-	test(l,"Marie",'f',"Raymond","Louise");
-	test(l,"René",'o',"Gaston","Augustine");
-	test(l,"Paul",'m',"Louise","Augustine");
-	test(l,"Gérard",'m',"Michel","Jeannine");
-	test(l,"Mireille",'f',"Raymond","Jeannine");
-	test(l,"Paul",'m',"Gaston","Augustine");
-	test(l,"Ludivine",'f',"Gaston","Augustine");
-	test(l,"Thierry",'m',"Michel","Ludivine");
-	afficheListeChainee(l);
-	printf("SAUVEGARDE\n");
-	save(l,"SAVE.txt");
-	printf("Fin de la sauvegarde\n");
-	petitsEnfants(l,"Lucien");
-	petitsEnfants(l,"Gaston");
-	enfants(l,"Raymond",1);
-	enfants(l,"Lucien",1);
-	descendants(l,"Louise");
-	descendants(l,"Lucien");
-	partenaires(l,"Lucien");
-	partenaires(l,"Raymond");
-	partenaires(l,"Augustine");
-	affilie(l,"Lucien",'m',0);
-	affilie(l,"Marie",'m',0);
-	affilie(l,"Lucien",'f',0);
-	affilie(l,"Marie",'f',0);
-	affilie(l,"Lucien",'m',1);
-	affilie(l,"Marie",'m',1);
-	affilie(l,"Lucien",'f',1);
-	affilie(l,"Marie",'f',1);
-	affilie(l,"Gaston",'f',1);
-	affilie(l,"Gaston",'m',1);
-	affilieParent(l,"Lucien",'m');
-	affilieParent(l,"Lucien",'f');
-	affilieParent(l,"Marie",'m');
-	affilieParent(l,"Marie",'f');
-	affilieParent(l,"Gaston",'m');
-	affilieParent(l,"Gaston",'f');
-	cousins(l,"Lucien");
+	int fini = 0;
+	while (!fini){
+        fini = parseCommande(&l);
+        printf("\n");
+	}
 }
 
