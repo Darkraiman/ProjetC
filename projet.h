@@ -57,11 +57,11 @@ int creeTDescendant(Individu* i , char* prenom, Individu** tab,int indice);
 
 int creeTEnfant(Individu* i,char* prenom,Individu** tab,int indice);
 
-void descendants();
+void descendants(Liste* l, char* prenom);
 
-void enfants();
+void enfants(Liste* l, char* prenom);
 
-char enMaj(char c);
+char EnMaj(char c);
 
 Individu* estDansFamille(Individu* racine,char* recherche);
 
@@ -115,7 +115,7 @@ int supprimer(Liste* l, Element* e);
 
 int supprimeTab(Individu** tab,int indiceASupp,int taille);
 
-void test(Liste* l, char* nom char sexe, char*pere, char* mere);
+void test(Liste* l, char* nom, char sexe, char*pere, char* mere);
 
 void viderBuffer();
 

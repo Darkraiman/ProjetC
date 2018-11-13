@@ -1,8 +1,6 @@
 /*******
 TODO
 OPTIMISER LES MALLOCS ET LES CREATIONS DE TABLEAU AFIN QUE LA TAILLE LIMITE SOIT LA RAM
-GERER LES CAS STUPIDES
-FAIRE LA DOC POUR LES FONCTIONS DONT JE NE LAI PAS ENCORE FAIT
 *******/
 
 #include "projet.h"
@@ -152,10 +150,12 @@ Liste* load(char* nomFichier){
 			ajouter(new, prenom, sexe, pere, mere);
 			current = fgetc(fichier);
 		}
+		fclose(fichier);
+        return new;
+	} else {
+        printf("Fichier inexistant ou problème dans son ouverture !");
+        return NULL;
 	}
-	fclose(fichier);
-
-	return new;
 }
 
 int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
@@ -182,14 +182,20 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 	}
 	Individu* i;
 	int passe = 1;
-	if (!(i=cherche(l,prenom))){
+	i=cherche(l,prenom);
+	if (!(i)){
 		i = (Individu*) malloc(sizeof(Individu));
 		i->prenom = prenom;
 		i->sexe = sexe;
 		i->pere = NULL;
 		i->mere = NULL;
 		passe = 0;
+	} else {
+        if (i->sexe==0 && sexe !=0){
+            i->sexe = sexe;
+        }
 	}
+
 	Individu* iPere = NULL;
 	Individu* iMere = NULL;
 	Element* rac = l->premier;
@@ -212,7 +218,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 					trouve++;
 					trouvePere++;
 				} else {
-					//free(i);
+					free(i);
 					return 2;
 				}
 		} else if (iPere = estDansFamille(rac->personne,pere)) {
@@ -221,7 +227,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 				i->pere = iPere;
 				trouvePere++;
 			} else {
-				//free(i);
+				free(i);
 				return 2;
 			}
 		}
@@ -237,7 +243,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 					trouve++;
 					trouveMere++;
 				} else {
-					//free(i);
+					free(i);
 					return 2;
 				}
 		} else if (iMere = estDansFamille(rac->personne,mere)) {
@@ -246,7 +252,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 				i->mere = iMere;
 				trouveMere++;
 			} else {
-				//free(i);
+				free(i);
 				return 2;
 			}
 		}
@@ -503,8 +509,13 @@ void afficheInfoS(Liste* l, char* prenom){
 	/*
 	Affiche les infos de la personne possèdant la chaine passé en paramètre comme prénom
 	*/
-	Individu* i = cherche(l,prenom);
-	afficheInfo(i);
+	Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        Individu* i = cherche(l,prenom);
+        afficheInfo(i);
+    }
 }
 void afficheInfo(Individu* i){
 	/*
@@ -530,55 +541,88 @@ void retrouveMere(Liste* l, char* prenom){
 	/*
 	Fonction d'affichage qui renvoie la mère de la personne dont le prénom est celui passé en paramètre
 	*/
-	Individu* i = cherche(l,prenom);
-	printf("Sa mère est : %s\n",(getMere(i)==NULL?"Non Disponible":getMere(i)));
+	Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        Individu* i = cherche(l,prenom);
+        printf("Sa mère est : %s\n",(getMere(i)==NULL?"Non Disponible":getMere(i)));
+    }
 }
 
 void retrouvePere(Liste* l, char* prenom){
 	/*
 	Fonction d'affichage qui renvoie le père de la personne dont le prénom est celui passé en paramètre
 	*/
-	Individu* i = cherche(l,prenom);
-	printf("Son père est : %s\n",(getPere(i)==NULL?"Non Disponible":getPere(i)));
+	Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        Individu* i = cherche(l,prenom);
+        printf("Son père est : %s\n",(getPere(i)==NULL?"Non Disponible":getPere(i)));
+    }
 }
 
 void retrouveParent(Liste* l, char* prenom){
 	/*
 	Fonction d'affichage qui renvoie la mère et le père de la personne dont le prénom est celui passé en paramètre
 	*/
-	retrouvePere(l,prenom);
-	retrouveMere(l,prenom);
+	Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        retrouvePere(l,prenom);
+        retrouveMere(l,prenom);
+    }
 }
 
 void retrouveGMere(Liste* l, char* prenom){
 	/*
 	Fonction d'affichage qui renvoie la grand mère de la personne dont le prénom est celui passé en paramètre
 	*/
-	Individu* i = cherche(l,prenom);
-	char* gm1 = getMere(cherche(l,getMere(i)));
-	char* gm2 = getMere(cherche(l,getPere(i)));
-	printf("Ses grands mères sont : %s et %s\n",(gm1==NULL?"Non Disponible":gm1),(gm2==NULL?"Non Disponible":gm2));
+	Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        Individu* i = cherche(l,prenom);
+        char* gm1 = getMere(cherche(l,getMere(i)));
+        char* gm2 = getMere(cherche(l,getPere(i)));
+        printf("Ses grands mères sont : %s et %s\n",(gm1==NULL?"Non Disponible":gm1),(gm2==NULL?"Non Disponible":gm2));
+    }
 }
 
 void retrouveGPere(Liste* l, char* prenom){
 	/*
 	Fonction d'affichage qui renvoie le grand père de la personne dont le prénom est celui passé en paramètre
 	*/
-	Individu* i = cherche(l,prenom);
-	char* gp1 = getPere(cherche(l,getMere(i)));
-	char* gp2 = getPere(cherche(l,getPere(i)));
-	printf("Son grand père est : %s et %s\n",(gp1==NULL?"Non Disponible":gp1),(gp2==NULL?"Non Disponible":gp2));
+	Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        Individu* i = cherche(l,prenom);
+        char* gp1 = getPere(cherche(l,getMere(i)));
+        char* gp2 = getPere(cherche(l,getPere(i)));
+        printf("Son grand père est : %s et %s\n",(gp1==NULL?"Non Disponible":gp1),(gp2==NULL?"Non Disponible":gp2));
+    }
 }
 
 void retrouveGParent(Liste* l, char* prenom){
 	/*
 	Fonction d'affichage qui renvoie la grand mère et le grand père de la personne dont le prénom est celui passé en paramètre
 	*/
-	retrouveGPere(l,prenom);
-	retrouveGMere(l,prenom);
+	Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        retrouveGPere(l,prenom);
+        retrouveGMere(l,prenom);
+    }
 }
 
 void afficheAscendant(Individu* i){
+    /*
+	Fonction d'affichage qui affiche les ascendants de l'individu passé en parametre
+	*/
 	if (!(i==NULL)){
 		printf("%s\n",i->prenom);
 		afficheAscendant(i->pere);
@@ -587,14 +631,26 @@ void afficheAscendant(Individu* i){
 }
 
 void ascendants(Liste* l, char* prenom){
+    /*
+	Fonction d'affichage qui affiche les ascendants du nom sous forme de chaine de caractere passé en parametre
+	*/
+    Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
 		Individu* i = cherche(l,prenom);
 		printf("Ces ascendants sont :\n");
 		afficheAscendant(i->pere);
 		afficheAscendant(i->mere);
+    }
 }
 
 
 int creeTEnfant(Individu* i,char* prenom,Individu** tab,int indice){
+    /*
+	Fonction qui ajoute dans son tableau tab passé en paramètre les enfants de l'individu prenom
+	Pour cela, elle va regarder si les parents de i sont prenom si oui et si ils ne sont pas déjà à l'interieur, on les ajoute
+	*/
 	if (!(i==NULL)){
 		if (estEgaleS(((i->mere==NULL)?NULL:i->mere->prenom),prenom)){
 			if (!inIndividu(tab,i->prenom,indice)){
@@ -616,56 +672,77 @@ int creeTEnfant(Individu* i,char* prenom,Individu** tab,int indice){
 }
 
 void afficheTab(Individu** tab,int ind){
+    /*
+    Fonction générique qui affiche le contenu d'un tableau d'individu
+    */
 	for (int i=0;i<ind;i++){
 		printf("%s\n",tab[i]->prenom);
 	}
 }
 
-void enfants(Liste* l, char* prenom, int option1){
-	Element* rac = l->premier;
-	Individu* tab[TAILLE_MINI];
-	if (option1){
-		printf("Enfant de %s :\n",prenom);
-	}
-	int indice = 0;
-	while(rac!=NULL){
-		indice = creeTEnfant(rac->personne,prenom,tab,indice);
-		rac = rac->suivant;
-	}
-	if (!indice){
-		printf("Pas d'enfants !\n");
-	}else {
-		afficheTab(tab,indice);
-	}
+void enfants(Liste* l, char* prenom){
+    /*
+    Fonction d'affichage qui affiche les enfants de la personne prenom passé en paramètre
+    */
+    Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        Element* rac = l->premier;
+        Individu* tab[TAILLE_MINI];
+        printf("Enfant de %s :\n",prenom);
+        int indice = 0;
+        while(rac!=NULL){
+            indice = creeTEnfant(rac->personne,prenom,tab,indice);
+            rac = rac->suivant;
+        }
+        if (!indice){
+            printf("Pas d'enfants !\n");
+        }else {
+            afficheTab(tab,indice);
+        }
+    }
 }
 
 
 
 void petitsEnfants(Liste* l, char* prenom){
-	Element* rac = l->premier;
-	printf("Petit(s) enfant(s) de %s:\n",prenom);
-	Individu** tab = (Individu**) malloc(sizeof(Individu*)*TAILLE_MINI);
-	int indice = 0;
-	while(rac!=NULL){
-		indice = creeTEnfant(rac->personne,prenom,tab,indice);
-		rac = rac->suivant;
-	}
-	Individu** tab2 = (Individu**) malloc(sizeof(Individu*)*TAILLE_MINI);
-	int indice2=0;
-	for (int i =0;i<indice;i++){
+    /*
+    Fonction d'affichage qui affiche les petits enfants de la personne prenom passé en paramètre
+    */
+    Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
         Element* rac = l->premier;
+        printf("Petit(s) enfant(s) de %s:\n",prenom);
+        Individu** tab = (Individu**) malloc(sizeof(Individu*)*TAILLE_MINI);
+        int indice = 0;
         while(rac!=NULL){
-            indice2 = creeTEnfant(rac->personne,tab[i]->prenom,tab2,indice2);
-            rac=rac->suivant;
+            indice = creeTEnfant(rac->personne,prenom,tab,indice);
+            rac = rac->suivant;
+        }
+        Individu** tab2 = (Individu**) malloc(sizeof(Individu*)*TAILLE_MINI);
+        int indice2=0;
+        for (int i =0;i<indice;i++){
+            Element* rac = l->premier;
+            while(rac!=NULL){
+                indice2 = creeTEnfant(rac->personne,tab[i]->prenom,tab2,indice2);
+                rac=rac->suivant;
+            }
+        }
+        if (!indice2){
+            printf("Pas de petits enfants !\n");
+        }else {
+            afficheTab(tab2,indice2);
         }
     }
-	if (!indice2){
-		printf("Pas de petits enfants !\n");
-	}else {
-		afficheTab(tab2,indice2);
-	}
 }
 int creeTDescendant(Individu* i, char* prenom, Individu** tab, int indice){
+    /*
+	Fonction qui ajoute dans son tableau tab passé en paramètre les descendants de l'individu prenom
+	Pour cela, elle va regarder si prenom est dans la famille de l'individu si oui et si il n'est pas déjà à l'interieur, on les ajoute
+	*/
     if (!(i==NULL)){
 		if (estDansFamille(i,prenom)){
 			if (!inIndividu(tab,i->prenom,indice)){
@@ -680,23 +757,34 @@ int creeTDescendant(Individu* i, char* prenom, Individu** tab, int indice){
 }
 
 void descendants(Liste* l, char* prenom){
-	Element* rac = l->premier;
-	Individu* tab[TAILLE_MINI];
-	int indice = 0;
-	while(rac!=NULL){
-		indice = creeTDescendant(rac->personne,prenom,tab,indice);
-		rac = rac->suivant;
-	}
-	printf("Descendants de %s\n",prenom);
-	if (indice){
-        afficheTab(tab,indice);
-	} else {
-        printf("Pas de descendants !\n");
+    /*
+    Fonction d'affichage qui affiche les descendants de la personne prenom passé en paramètre
+    */
+    Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        Element* rac = l->premier;
+        Individu* tab[TAILLE_MINI];
+        int indice = 0;
+        while(rac!=NULL){
+            indice = creeTDescendant(rac->personne,prenom,tab,indice);
+            rac = rac->suivant;
+        }
+        printf("Descendants de %s\n",prenom);
+        if (indice){
+            afficheTab(tab,indice);
+        } else {
+            printf("Pas de descendants !\n");
+        }
     }
 }
 
 
 void partenaires(Liste* l, char* prenom){
+    /*
+    Fonction d'affichage qui affiche les partenaires de la personne prenom passé en paramètre
+    */
     Individu* test = cherche(l,prenom);
     if (!(test)){
         printf("La personne donnée n'existe pas !\n");
@@ -734,12 +822,21 @@ void partenaires(Liste* l, char* prenom){
     }
 }
 int supprimeTab(Individu** tab,int indiceASupp,int taille){
+    /*
+    Fonction qui supprime l'element indiceASupp d'un tableau tab de taille taille
+    */
     tab[indiceASupp] = tab[taille-1];
     tab[taille-1] = NULL;
     return taille-1;
 }
 
 int creeTAffilie(Liste* l, char* prenom, Individu** tab, int indice,char sexe,int demi){
+    /*
+	Fonction qui ajoute dans son tableau tab passé en paramètre les personnes de même parent de l'individu prenom
+	Cette fonction prend 2 paramètres spéciaux qui sont demi et sexe
+	Sexe est soit m ou f et defini si on cherche un frere ou une soeur
+	demi quand à lui sert à définir si l'on veut les freres/soeurs ou les demi freres/soeurs, 1 pour demi,0 sans
+	*/
     Individu* test = cherche(l,prenom);
     if (!(test)){
         printf("La personne donnée n'existe pas !\n");
@@ -778,42 +875,55 @@ int creeTAffilie(Liste* l, char* prenom, Individu** tab, int indice,char sexe,in
 }
 
 void affilie(Liste* l, char* prenom,char sexe,int demi){
-    if (demi){
-        if (sexe=='m'){
-            printf("Demi-frere(s) ");
-        } else {
-            printf("Demi-soeur(s) ");
-        }
+    /*
+    Fonction d'affichage qui affiche les freres/soeurs/demi freres/demi soeurs de la personne prenom passé en paramètre en fonction des paramètres
+    */
+    Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
     } else {
-        if (sexe=='m'){
-            printf("Frere(s) ");
-        } else {
-            printf("Soeur(s) ");
-        }
-    }
-    printf("de %s : \n",prenom);
-    Individu* tab[TAILLE_MINI];
-    int cptG=0;
-    cptG = creeTAffilie(l,prenom,tab,cptG,sexe,demi);
-    if (!cptG){
         if (demi){
             if (sexe=='m'){
-                printf("Pas de demi-freres connus !\n");
+                printf("Demi-frere(s) ");
             } else {
-                printf("Pas de demi-soeurs connus !\n");
+                printf("Demi-soeur(s) ");
             }
         } else {
             if (sexe=='m'){
-                printf("Pas de freres connus !\n");
+                printf("Frere(s) ");
             } else {
-                printf("Pas de soeurs connus !\n");
+                printf("Soeur(s) ");
             }
         }
-    } else {
-        afficheTab(tab,cptG);
+        printf("de %s : \n",prenom);
+        Individu* tab[TAILLE_MINI];
+        int cptG=0;
+        cptG = creeTAffilie(l,prenom,tab,cptG,sexe,demi);
+        if (!cptG){
+            if (demi){
+                if (sexe=='m'){
+                    printf("Pas de demi-freres connus !\n");
+                } else {
+                    printf("Pas de demi-soeurs connus !\n");
+                }
+            } else {
+                if (sexe=='m'){
+                    printf("Pas de freres connus !\n");
+                } else {
+                    printf("Pas de soeurs connus !\n");
+                }
+            }
+        } else {
+            afficheTab(tab,cptG);
+        }
     }
 }
 int creeTAffilieParent(Liste* l,Individu* test,Individu** tab,int indice,char sexe){
+    /*
+	Fonction qui ajoute dans son tableau tab passé en paramètre les oncles/tantes de l'individu prenom
+	Cette fonction prend un paramètre spécial qui est sexe
+	Sexe est soit m ou f et defini si on cherche une tante ou un oncle
+	*/
     Individu* iP = test->mere;
     Individu* iM = test->pere;
     if (iP){
@@ -826,6 +936,9 @@ int creeTAffilieParent(Liste* l,Individu* test,Individu** tab,int indice,char se
 }
 
 void affilieParent(Liste* l, char* prenom,char sexe){
+    /*
+    Fonction d'affichage qui affiche les oncles/tantes de la personne prenom passé en paramètre en fonction des paramètres
+    */
     Individu* test = cherche(l,prenom);
     if (!(test)){
         printf("La personne donnée n'existe pas !\n");
@@ -851,6 +964,9 @@ void affilieParent(Liste* l, char* prenom,char sexe){
 }
 
 void cousins(Liste* l, char* prenom){
+    /*
+    Fonction d'affichage qui affiche les cousins de la personne prenom passé en paramètre
+    */
     Individu* test = cherche(l,prenom);
     if (!(test)){
         printf("La personne donnée n'existe pas !\n");
@@ -879,16 +995,27 @@ void cousins(Liste* l, char* prenom){
 }
 
 void viderBuffer(){
-  int c;
-  while((c=getchar()) != EOF && c != '\n');
+    /*
+    Fonction qui vide le buffer.
+    Peut être inutile mais permet au cas où de ne pas générer de bugs.
+    */
+    int c;
+    while((c=getchar()) != EOF && c != '\n');
 }
 
 int lanceCommande(Liste** l,char* fonction, char* parametre){
+    /*
+	Fonction qui à partir du nom de fonction et des paramètres, lance les fonctions correspondantes
+	Cette fonction s'occupe de découper les paramètres si besoin (exemple fonction new)
+	*/
     if (estEgaleS(fonction,"load")){
         if(!strlen(parametre)) {
             printf("La fonction load necessite un paramètre qui correspond au fichier dans lequel se trouve la famille.\n");
         } else {
-            *l = load(parametre);
+            Liste* l2 = load(parametre);
+            if (l2){
+                *l = l2;
+            }
         }
     } else if (estEgaleS(fonction,"save")){
         if(!strlen(parametre)) {
@@ -921,7 +1048,7 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
                 return 0;
             }
             ind++;
-            if (!(parametre[ind]==',')){
+            if (!(parametre[ind]==',' || ind >= taillemax)){
                 sexe = parametre[ind++];
                 ind++;
             } else {
@@ -929,7 +1056,7 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
                 ind++;
             }
             indCha = 0;
-            if (!(parametre[ind]==',')){
+            if (!(parametre[ind]==','|| ind >= taillemax)){
                 pere = (char*) malloc(sizeof(char)*100);
                 while (ind<taillemax && parametre[ind] != ','){
                     pere[indCha++]=parametre[ind++];
@@ -940,7 +1067,7 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
             }
             ind++;
             indCha = 0;
-            if (ind == taillemax||parametre[ind]==','){
+            if (ind >= taillemax||parametre[ind]==','){
                 mere = NULL;
             } else {
                 mere = (char*) malloc(sizeof(char)*100);
@@ -1003,7 +1130,7 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
         if(!strlen(parametre)) {
             printf("La fonction enfants necessite un paramètre qui correspond la personne pour lequel on recherche les enfants.\n");
         } else {
-            enfants(*l,parametre,1);
+            enfants(*l,parametre);
         }
     } else if (estEgaleS(fonction,"petitsenfants")){
         if(!strlen(parametre)) {
@@ -1072,6 +1199,10 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
 }
 
 int parseCommande(Liste** l){
+    /*
+	Fonction de parsing des lignes de commandes
+	Cette fonction se charge de découper la commande en 2 sous chaines fonction et parametre
+	*/
     printf("> ");
     char buffer[100];
     char fonction[14];
@@ -1090,13 +1221,13 @@ int parseCommande(Liste** l){
     fonction[indCha]='\0';
     indBuffer++;
     indCha = 0;
-    while(indBuffer<tailleEntree-1 && buffer[indBuffer]!=')'){
+    while(indBuffer<tailleEntree && buffer[indBuffer]!=')'){
         parametre[indCha]=buffer[indBuffer];
         indBuffer++;
         indCha++;
     }
     parametre[indCha]='\0';
-    printf("Fonction %s (%s)\n",fonction,parametre);
+    printf("Fonction %s(%s)\n",fonction,parametre);
     return lanceCommande(l,fonction,parametre);
 }
 

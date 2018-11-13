@@ -1,2 +1,5 @@
-projet.o : projet.c projet.h
+projet : projet.c projet.h
 	gcc $< -o $@
+
+clean:
+	rm -rf *.o
