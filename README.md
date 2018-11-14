@@ -1,6 +1,5 @@
 # ProjetC
 Projet de C (Arbre Généalogique)
 
-#TODO
-OPTIMISER LES MALLOCS
+Le fichier .zip est le fichier à rendre !!!
 
