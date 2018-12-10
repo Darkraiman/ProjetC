@@ -11,6 +11,8 @@ struct individu {
 	char sexe;
 	Individu* pere;
 	Individu* mere;
+	long date;
+	long dateMort;
 };
 
 struct element
@@ -41,7 +43,7 @@ void affilie(Liste* l, char* prenom,char sexe, int demi);
 
 void affilieParent(Liste* l,char* prenom,char sexe);
 
-int ajouter(Liste* l,char* prenom,char sexe,char* pere,char* mere);
+int ajouter(Liste* l,char* prenom,char sexe,char* pere,char* mere,long date,long dateMort);
 
 void ascendants(Liste* l,char* prenom);
 
@@ -56,6 +58,8 @@ int creeTAffilieParent(Liste* l,Individu* test,Individu** tab,int indice,char se
 int creeTDescendant(Individu* i , char* prenom, Individu** tab,int indice);
 
 int creeTEnfant(Individu* i,char* prenom,Individu** tab,int indice);
+
+void del(Liste* l, char* prenom);
 
 void descendants(Liste* l, char* prenom);
 
@@ -115,7 +119,9 @@ int supprimer(Liste* l, Element* e);
 
 int supprimeTab(Individu** tab,int indiceASupp,int taille);
 
-void test(Liste* l, char* nom, char sexe, char*pere, char* mere);
+void test(Liste* l, char* nom, char sexe, char*pere, char* mere,long date,long dateMort);
+
+void transformeNom(char* prenom);
 
 void viderBuffer();
 
