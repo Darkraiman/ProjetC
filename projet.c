@@ -4,7 +4,7 @@ OPTIMISER LES MALLOCS ET LES CREATIONS DE TABLEAU AFIN QUE LA TAILLE LIMITE SOIT
 *******/
 
 #include "projet.h"
-#define TAILLE_MINI 100
+#define TAILLE_MINI 500
 
 Liste* initListe(){
 	/*
@@ -47,6 +47,13 @@ char EnMaj(char c){
 	Fonction renvoyant le caractère passé en paramètre en majuscule
 	*/
 	return (c>='a' && c<='z'?c-'a'+'A':c);
+}
+
+char EnMin(char c){
+	/*
+	Fonction renvoyant le caractère passé en paramètre en minuscule
+	*/
+	return (c>='A'&&c<='Z'?c-'A'+'a':c);
 }
 
 int estEgaleS(char* ch1, char* ch2){
@@ -106,7 +113,11 @@ Liste* load(char* nomFichier){
 			char *prenom=malloc(sizeof(char)*TAILLE_MINI);
 			char *pere=malloc(sizeof(char)*TAILLE_MINI);
 			char *mere=malloc(sizeof(char)*TAILLE_MINI);
+			char *dateN=malloc(sizeof(char)*TAILLE_MINI);
+			char *dateM=malloc(sizeof(char)*TAILLE_MINI);
 			char sexe=0;
+			long date = 0;
+			long dateMort = 0;
 			int i = 0;
 			while(current!=':'){
 				prenom[i++]=current;
@@ -133,11 +144,36 @@ Liste* load(char* nomFichier){
 
 			//Lecture de la mère
 			i=0;
-			while(current!='\n'){
+			while(current!=','){
 				mere[i++]=current;
 				current=fgetc(fichier);
 			}
 			mere[i]='\0';
+			current=fgetc(fichier);
+            i=0;
+            while(current!=','){
+                dateN[i++]=current;
+                current=fgetc(fichier);
+            }
+            dateN[i]='\0';
+            if (dateN[0]!='\0'){
+                char* fin;
+                date = strtol(dateN,&fin,10);
+            }
+            free(dateN);
+
+            current=fgetc(fichier);
+            i=0;
+            while(current!='\n'){
+                dateM[i++]=current;
+                current=fgetc(fichier);
+            }
+            dateM[i]='\0';
+            if (dateM[0]!='\0'){
+                char* fin;
+                dateMort = strtol(dateM,&fin,10);
+            }
+            free(dateM);
 			//Free
 			if(pere[0]=='\0'){
 				free(pere);
@@ -147,7 +183,7 @@ Liste* load(char* nomFichier){
 				free(mere);
 				mere=NULL;
 			}
-			ajouter(new, prenom, sexe, pere, mere);
+			ajouter(new, prenom, sexe, pere, mere,date,dateMort);
 			current = fgetc(fichier);
 		}
 		fclose(fichier);
@@ -158,7 +194,7 @@ Liste* load(char* nomFichier){
 	}
 }
 
-int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
+int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere,long date,long dateMort){
 	/*
 	Fonction permettant d'ajouter un nouveau membre de la famille
 
@@ -177,6 +213,9 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 	2 si la personne correspondant au nom donné n'est pas du sexe attendu (ex : mere qui serait de sexe m)
 	3 si il ya un probleme dans la suppresion (l'element n'existe pas) (/!\ ne devrait jamais arriver)
 	*/
+	if (estEgaleS(prenom,mere)|| estEgaleS(prenom,pere) || estEgaleS(pere,mere)){
+		return 5;
+	}
 	if (!estSexeValide(sexe)){
 		return 1;
 	}
@@ -185,17 +224,40 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 	i=cherche(l,prenom);
 	if (!(i)){
 		i = (Individu*) malloc(sizeof(Individu));
+		transformeNom(prenom);
 		i->prenom = prenom;
 		i->sexe = sexe;
 		i->pere = NULL;
 		i->mere = NULL;
 		passe = 0;
 	} else {
-        if (i->sexe==0 && sexe !=0){
-            i->sexe = sexe;
-        }
+		Individu** probleme = (Individu**) malloc(sizeof(Individu*)*TAILLE_MINI);
+		Element* rac = l->premier;
+		int indice = 0;
+		while (rac!=NULL){
+			indice = creeTDescendant(rac->personne,prenom,probleme,indice);
+			rac = rac->suivant;
+		}
+		for (int i=0;i<indice;i++){
+			if (estEgaleS(probleme[i]->prenom,mere) || estEgaleS(probleme[i]->prenom,pere)){
+				return 4;
+			}
+		}
+		free(probleme);
+		if (!estEgaleS((!i->mere?NULL:i->mere->prenom),mere) && i->mere != NULL){
+			return 6;
+		}
+		if (!estEgaleS(pere,(!i->pere?NULL:i->pere->prenom)) && i->pere != NULL){
+			return 6;
+		}
+		if (i->sexe==0 && sexe !=0){
+			i->sexe = sexe;
+		} else if (i->sexe!=0 && sexe!=0 && sexe!=i->sexe){
+			return 7;
+		}
 	}
-
+	i->date = date;
+	i->dateMort = dateMort;
 	Individu* iPere = NULL;
 	Individu* iMere = NULL;
 	Element* rac = l->premier;
@@ -221,7 +283,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 					free(i);
 					return 2;
 				}
-		} else if (iPere = estDansFamille(rac->personne,pere)) {
+		} else if ((iPere = estDansFamille(rac->personne,pere))) {
 			if (iPere->sexe == 'm'|| iPere->sexe == 0){
 				iPere->sexe = 'm';
 				i->pere = iPere;
@@ -246,7 +308,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 					free(i);
 					return 2;
 				}
-		} else if (iMere = estDansFamille(rac->personne,mere)) {
+		} else if ((iMere = estDansFamille(rac->personne,mere))) {
 			if (iMere->sexe == 'f'|| iMere->sexe == 0){
 				iMere->sexe = 'f';
 				i->mere = iMere;
@@ -261,19 +323,25 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 	}
 	if(!trouvePere && pere!=NULL){
 		Individu* nouveau = (Individu*) malloc(sizeof(Individu));
+		transformeNom(pere);
 		nouveau->prenom = pere;
 		nouveau->sexe = 'm';
 		nouveau->pere = NULL;
 		nouveau->mere = NULL;
+		nouveau->date = 0;
+		nouveau->dateMort = 0;
 		i->pere = nouveau;
 		l->nbIndividu++;
 	}
 	if (!trouveMere && mere!=NULL){
 		Individu* nouveau = (Individu*) malloc(sizeof(Individu));
+		transformeNom(mere);
 		nouveau->prenom = mere;
 		nouveau->sexe = 'f';
 		nouveau->pere = NULL;
 		nouveau->mere = NULL;
+		nouveau->date = 0;
+		nouveau->dateMort = 0;
 		i->mere = nouveau;
 		l->nbIndividu++;
 	}
@@ -301,6 +369,16 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere){
 	return 0;
 }
 
+void transformeNom(char* prenom){
+	/*
+	Fonction transformant le prenom en ne lui mettant que la première lettre en majuscule
+	*/
+	prenom[0] = EnMaj(prenom[0]);
+	for (int i =1; prenom[i] != '\0';i++){
+		prenom[i] = EnMin(prenom[i]);
+	}
+}
+
 Individu* estDansFamille(Individu* racine, char* recherche){
 	/*
 	Fonction recursive qui renvoie si la personne recherché (renseigné par la chaine de caractère) est dans la famille de la personne racine
@@ -315,7 +393,7 @@ Individu* estDansFamille(Individu* racine, char* recherche){
 		if (estEgaleS(racine->mere->prenom,recherche)){
 			return racine->mere;
 		} else {
-			if (en_cours = estDansFamille(racine->mere,recherche)){
+			if ((en_cours = estDansFamille(racine->mere,recherche))){
 				return en_cours;
 			}
 		}
@@ -324,7 +402,7 @@ Individu* estDansFamille(Individu* racine, char* recherche){
 		if (estEgaleS(racine->pere->prenom,recherche)){
 			return racine->pere;
 		} else {
-			if (en_cours = estDansFamille(racine->pere,recherche)){
+			if ((en_cours = estDansFamille(racine->pere,recherche))){
 				return en_cours;
 			}
 		}
@@ -346,6 +424,27 @@ int supprimer(Liste* l, Element* e){
 		if (rac==e){
 			prec->suivant = e->suivant;
 			free(e);
+			return 0;
+		}
+		prec = rac;
+		rac = rac->suivant;
+	}
+	return 1;
+}
+
+int supprimerSansFree(Liste* l, Element* e){
+	/*
+	Fonction qui supprimer l'element e dans la liste l passé en paramètre
+	*/
+	if (l->premier == e){
+		l->premier = e->suivant;
+		return 0;
+	}
+	Element* rac = l->premier;
+	Element* prec = NULL;
+	while (rac!=NULL){
+		if (rac==e){
+			prec->suivant = e->suivant;
 			return 0;
 		}
 		prec = rac;
@@ -416,9 +515,9 @@ void saveFamille(FILE* fichier, Individu* i,char** dejaFait,int* taille){
 void savePersonne(FILE* fichier,Individu* i,char** dejaFait,int* taille){
 	if (!inChar(dejaFait,i->prenom,taille)){
 		if (!i->sexe){
-			fprintf(fichier,"%s:,%s,%s\n",i->prenom,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)));
+			fprintf(fichier,"%s:,%s,%s,%ld,%ld\n",i->prenom,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort);
 		}else {
-			fprintf(fichier,"%s:%c,%s,%s\n",i->prenom,i->sexe,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)));
+			fprintf(fichier,"%s:%c,%s,%s,%ld,%ld\n",i->prenom,i->sexe,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort);
 		}
 		dejaFait[(*taille)++] = i->prenom;
 	}
@@ -440,9 +539,9 @@ void save(Liste* l, char* nomFichier){
 void viewPersonne(Individu* i,char** dejaFait,int* taille){
 	if (!inChar(dejaFait,i->prenom,taille)){
 		if (!i->sexe){
-			printf("%s:,%s,%s\n",i->prenom,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)));
+			printf("%s:,%s,%s,%ld,%ld\n",i->prenom,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort);
 		}else {
-			printf("%s:%c,%s,%s\n",i->prenom,i->sexe,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)));
+			printf("%s:%c,%s,%s,%ld,%ld\n",i->prenom,i->sexe,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort);
 		}
 		dejaFait[(*taille)++] = i->prenom;
 	}
@@ -467,20 +566,32 @@ void view(Liste* l){
 	}
 }
 
-void test(Liste* l, char* nom, char sexe, char* pere, char* mere){
+void test(Liste* l, char* nom, char sexe, char* pere, char* mere,long date,long dateMort){
 	/*
 	Fonction de test qui récupère les erreurs et les affiche dans la console
 	*/
-	int codeExec = ajouter(l,nom,sexe,pere,mere);
+	int codeExec = ajouter(l,nom,sexe,pere,mere,date,dateMort);
 	switch (codeExec){
 		case 0:
 			printf("Tout s'est bien passe !\n");
 			break;
 		case 1:
-			printf("Probleme avec le sexe !");
+			printf("Probleme avec le sexe !\n");
 			break;
 		case 2:
-			printf("Probleme avec le sexe d'un parent ! ");
+			printf("Probleme avec le sexe d'un parent !\n");
+			break;
+		case 4:
+			printf("Problème un descendant ne peut pas être votre parent\n");
+			break;
+		case 5:
+			printf("Problème, vous ajoutez quelqu'un qui est son propre parent ou vous essayez d'ajouter une personne avec la même personne en père et en mère\n");
+			break;
+		case 6:
+			printf("Vous ne pouvez pas changer un père ou une mère déjà fourni\n");
+			break;
+		case 7:
+			printf("Vous ne pouvez pas modifier un sexe déjà défini\n");
 			break;
 		default:
 			printf("WTF");
@@ -497,7 +608,7 @@ Individu* cherche(Liste* l,char* prenom){
 	while (rac!=NULL){
 		if(estEgaleS(rac->personne->prenom,prenom)){
 			return rac->personne;
-		} else if (i=estDansFamille(rac->personne,prenom)){
+		} else if ((i=estDansFamille(rac->personne,prenom))){
 			return i;
 		}
 		rac=rac->suivant;
@@ -525,6 +636,7 @@ void afficheInfo(Individu* i){
 	Sexe : SEXE
 	Père : PRENOMPERE
 	Mère : PRENOMMERE
+	Date de naissance : AAAAMMJJ
 	*/
 	printf("Information sur %s :\n",i->prenom);
 	printf("Sexe : ");
@@ -535,6 +647,8 @@ void afficheInfo(Individu* i){
 	}
 	printf("Père : %s\n",(i->pere==NULL?"Non disponible":i->pere->prenom));
 	printf("Mère : %s\n",(i->mere==NULL?"Non disponible":i->mere->prenom));
+	printf("Date de naissance : %ld\n",i->date);
+	printf("Date de décès : %ld\n",i->dateMort);
 }
 
 void retrouveMere(Liste* l, char* prenom){
@@ -790,7 +904,7 @@ void partenaires(Liste* l, char* prenom){
         printf("La personne donnée n'existe pas !\n");
     } else {
         Element* rac = l->premier;
-        Individu* tab[TAILLE_MINI];
+        Individu** tab = malloc(sizeof(Individu*)*TAILLE_MINI);
         int indice = 0;
         char sexe = test->sexe;
         while(rac!=NULL){
@@ -803,18 +917,26 @@ void partenaires(Liste* l, char* prenom){
         if (indice){
             if (sexe=='m'){
                 for (int i = 0;i<indice;i++){
-                    if (!(inIndividu(dejaFait,tab[i]->mere->prenom,indDejaFait))){
-                        printf("%s\n",tab[i]->mere->prenom);
-                        dejaFait[indDejaFait++]=tab[i]->mere;
+                    Individu* existe = tab[i]->mere;
+                    if (tab[i]->mere){
+                        if (!(inIndividu(dejaFait,tab[i]->mere->prenom,indDejaFait))){
+                            dejaFait[indDejaFait++]=tab[i]->mere;
+                        }
                     }
                 }
             } else {
                 for (int i = 0;i<indice;i++){
-                    if (!(inIndividu(dejaFait,tab[i]->pere->prenom,indDejaFait))){
-                        printf("%s\n",tab[i]->pere->prenom);
-                        dejaFait[indDejaFait++]=tab[i]->pere;
+                    if (tab[i]->pere){
+                        if (!(inIndividu(dejaFait,tab[i]->pere->prenom,indDejaFait))){
+                            dejaFait[indDejaFait++]=tab[i]->pere;
+                        }
                     }
                 }
+            }
+            if(indDejaFait){
+                afficheTab(dejaFait,indDejaFait);
+            } else {
+                printf("Pas de partenaires connus !\n");
             }
         } else {
             printf("Pas de partenaires connus !\n");
@@ -837,42 +959,39 @@ int creeTAffilie(Liste* l, char* prenom, Individu** tab, int indice,char sexe,in
 	Sexe est soit m ou f et defini si on cherche un frere ou une soeur
 	demi quand à lui sert à définir si l'on veut les freres/soeurs ou les demi freres/soeurs, 1 pour demi,0 sans
 	*/
-    Individu* test = cherche(l,prenom);
-    if (!(test)){
-        printf("La personne donnée n'existe pas !\n");
-    } else {
-        Individu* i;
-        char* prenomMDemi;
-        if (demi){
-            Individu* iM;
-            iM = test->mere;
-            if (iM){
-                prenomMDemi = iM->prenom;
-            }
-            i = test->pere;
-        } else {
-            i = test->mere;
-        }
-        if (i){
-            Element* rac = l->premier;
-            int indice = 0;
-            char* prenomM = i->prenom;
-            while(rac!=NULL){
-                indice = creeTEnfant(rac->personne,prenomM,tab,indice);
-                rac = rac->suivant;
-            }
-            for (int i=0;i<indice;i++){
-                if (tab[i]->sexe != sexe || estEgaleS(prenom,tab[i]->prenom) || (estEgaleS(prenomMDemi,tab[i]->mere->prenom)&&demi)){
-                    indice=supprimeTab(tab,i,indice);
-                    i--;
-                }
-            }
-            return indice;
-        } else {
-            return 0;
-        }
-    }
+	Individu* test = cherche(l,prenom);
+	Individu* i;
+	char* prenomMDemi;
+	if (demi){
+		Individu* iM;
+		iM = test->mere;
+		if (iM){
+			prenomMDemi = iM->prenom;
+		}
+		i = test->pere;
+	} else {
+		i = test->mere;
+	}
+	if (i){
+		Element* rac = l->premier;
+		int indice = 0;
+		char* prenomM = i->prenom;
+		while(rac!=NULL){
+			indice = creeTEnfant(rac->personne,prenomM,tab,indice);
+			rac = rac->suivant;
+		}
+		for (int i=0;i<indice;i++){
+			if (tab[i]->sexe != sexe || estEgaleS(prenom,tab[i]->prenom) || (estEgaleS(prenomMDemi,tab[i]->mere->prenom)&&demi)){
+				indice=supprimeTab(tab,i,indice);
+				i--;
+			}
+		}
+		return indice;
+	} else {
+		return 0;
+	}
 }
+
 
 void affilie(Liste* l, char* prenom,char sexe,int demi){
     /*
@@ -933,6 +1052,41 @@ int creeTAffilieParent(Liste* l,Individu* test,Individu** tab,int indice,char se
         indice = creeTAffilie(l,iM->prenom,tab,indice,sexe,0);
     }
     return indice;
+}
+
+int compteGeneration(Individu* i,int gen){
+	if (i==NULL){
+		return gen;
+	} else {
+		int genP = compteGeneration(i->pere,gen+1);
+		int genM = compteGeneration(i->mere,gen+1);
+		return (genP>genM?genP:genM);
+	}
+}
+
+void ascendance(Liste* l, char* prenom){
+	Individu* i = cherche(l,prenom);
+	if (!i){
+		printf("La personne donnée n'existe pas !\n");
+	} else {
+		int genP = compteGeneration(i->mere,0);
+		int genM = compteGeneration(i->pere,0);
+		int res = (genP>genM?genP:genM);
+		printf("%s est issu de %d générations\n",prenom,res);
+	}
+}
+
+void tailleArbre(Liste*l){
+	Element* rac = l->premier;
+	int res = 0;
+	while (rac!=NULL){
+		int enCours = compteGeneration(rac->personne,0);
+		if (enCours > res){
+			res = enCours;
+		}
+		rac = rac->suivant;
+	}
+	printf("La taille de l'arbre est %d\n",res);
 }
 
 void affilieParent(Liste* l, char* prenom,char sexe){
@@ -1003,6 +1157,144 @@ void viderBuffer(){
     while((c=getchar()) != EOF && c != '\n');
 }
 
+int recense_famille(Individu* i, char sexe,char** dejaFait,int taille){
+	if(i==NULL){
+		return taille;
+	} else {
+		if (i->sexe == sexe && !inChar(dejaFait,i->prenom,&taille)){
+			printf("%s\n",i->prenom);
+			dejaFait[taille++] = i->prenom;
+		}
+		taille = recense_famille(i->pere,sexe,dejaFait,taille);
+		taille = recense_famille(i->mere,sexe,dejaFait,taille);
+		return taille;
+	}
+}
+
+void recense(Liste* l, char c){
+	if (!estSexeValide(c)){
+		printf("Le sexe donnée n'est pas valide");
+	} else {
+		Element* rac = l->premier;
+		char** dejaFait = malloc(sizeof(char*)*TAILLE_MINI);
+		int taille = 0;
+		while (rac!=NULL){
+			taille  = recense_famille(rac->personne,c,dejaFait,taille);
+			rac = rac->suivant;
+		}
+		free(dejaFait);
+	}
+}
+
+int creeTAscendant(Individu* i,Individu** tab,int taille){
+	if (i==NULL){
+		return taille;
+	}
+	tab[taille++] = i;
+	taille = creeTAscendant(i->pere,tab,taille);
+	taille = creeTAscendant(i->mere,tab,taille);
+	return taille;
+}
+
+int ontLien(Individu** tab1,int taille1,char* prenom1, Individu** tab2,int taille2,char* prenom2){
+	for (int i =0;i<taille1;i++){
+		for (int j = 0;j<taille2;j++){
+			if(estEgaleI(tab1[i],tab2[j])){
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+void lien(Liste* l, char* p1,char* p2){
+	Individu* i1 = cherche(l,p1);
+	Individu* i2 = cherche(l,p2);
+	if (!i1 || !i2){
+		printf("Pas de lien de parenté !\n");
+	} else {
+		int taille1=0;
+		int taille2=0;
+		Individu** ancetreP1 = (Individu**) malloc(sizeof(Individu));
+		taille1 = creeTAscendant(i1,ancetreP1,taille1);
+		Individu** ancetreP2 = (Individu**) malloc(sizeof(Individu));
+		taille2 = creeTAscendant(i2,ancetreP2,taille2);
+		if (ontLien(ancetreP1,taille1,p1,ancetreP2,taille2,p2)){
+			printf("Ils sont parentés\n");
+		} else {
+			printf("Ils ne sont pas parentés\n");
+		}
+	}
+}
+
+void del(Liste* l, char* prenom){
+	Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+		if (test->pere != NULL || test->mere != NULL){
+			printf("Suppression impossible ! Veuillez supprimer les parents d'abord !\n");
+			return;
+		} else {
+			Individu** tab = (Individu**) malloc(sizeof(Individu*)*TAILLE_MINI);
+			int indice = 0;
+			Element* rac = l->premier;
+			while (rac!=NULL){
+				indice = creeTEnfant(rac->personne,prenom,tab,indice);
+				rac = rac->suivant;
+			}
+			for (int i =0;i<indice;i++){
+				if (test->sexe == 'm'){
+					tab[i] -> pere = NULL;
+				} else {
+					tab[i] -> mere = NULL;
+				}
+			}
+			free(test);
+		}
+	}
+}
+
+Element* chercheMin(Liste* l){
+    Element* rac = l->premier;
+    if (rac==NULL){
+        return NULL;
+    }
+    Element* min = l->premier;
+    while (rac!=NULL){
+        if (min->personne->date > rac->personne->date){
+            min=rac;
+        }
+        rac=rac->suivant;
+    }
+    return min;
+}
+
+void ajouteListeChainee(Liste* l, Element* e){
+    e->suivant=NULL;
+    if (!l->premier){
+        l->premier=e;
+    } else {
+        Element* rac = l->premier;
+        while (rac->suivant!=NULL){
+            rac=rac->suivant;
+        }
+        rac->suivant=e;
+    }
+}
+
+void tri_age(Liste* l){
+    Liste* nouv = (Liste*) malloc(sizeof(Liste));
+    nouv->premier=NULL;
+    Element* min;
+    while(l->premier!=NULL){
+        min = chercheMin(l);
+        supprimerSansFree(l,min);
+        ajouteListeChainee(nouv,min);
+    }
+    *l=*nouv;
+}
+
 int lanceCommande(Liste** l,char* fonction, char* parametre){
     /*
 	Fonction qui à partir du nom de fonction et des paramètres, lance les fonctions correspondantes
@@ -1029,13 +1321,15 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
         return 1;
     } else if (estEgaleS(fonction,"new")){
         if(!strlen(parametre)) {
-            printf("La fonction new necessite au moins un paramètre prénom et au plus 4 paramètre qui sont prenom, sexe , pere , mere dans cette ordre.\n");
+            printf("La fonction new necessite au moins un paramètre prénom et au plus 6 paramètres qui sont prenom, sexe , pere , mere, date naissance et date mort dans cette ordre.\n");
         } else {
 
             char* prenom = (char*) malloc(sizeof(char)*100);
             char sexe;
             char* pere;
             char* mere;
+            char* date;
+            char* dateMort;
             int taillemax = strlen(parametre);
             int indCha = 0;
             int ind = 0;
@@ -1044,7 +1338,7 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
             }
             prenom[indCha]='\0';
             if (ind>=taillemax){
-                test(*l,prenom,0,NULL,NULL);
+                test(*l,prenom,0,NULL,NULL,0,0);
                 return 0;
             }
             ind++;
@@ -1076,7 +1370,34 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
                 }
                 mere[indCha]='\0';
             }
-            test(*l,prenom,sexe,pere,mere);
+
+            ind++;
+            indCha = 0;
+            if (ind >= taillemax||parametre[ind]==','){
+                date = "0";
+            } else {
+                date = (char*) malloc(sizeof(char)*100);
+                while (ind<taillemax && parametre[ind] != ','){
+                    date[indCha++]=parametre[ind++];
+                }
+                date[indCha]='\0';
+            }
+            char* fin;
+            long dateL = strtol(date,&fin,10);
+            indCha=0;
+            ind++;
+            if (ind >= taillemax||parametre[ind]==','){
+                dateMort = "0";
+            } else {
+                dateMort = (char*) malloc(sizeof(char)*100);
+                while (ind<taillemax && parametre[ind] != ','){
+                    dateMort[indCha++]=parametre[ind++];
+                }
+                dateMort[indCha]='\0';
+            }
+            long dateMortL = strtol(dateMort,&fin,10);
+            test(*l,prenom,sexe,pere,mere,dateL,dateMortL);
+            tri_age(*l);
         }
     } else if (estEgaleS(fonction,"info")){
         if(!strlen(parametre)) {
@@ -1114,6 +1435,12 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
         } else {
             retrouveGPere(*l,parametre);
         }
+    }else if (estEgaleS(fonction,"ascendance")){
+        if(!strlen(parametre)) {
+            printf("La fonction ascendance necessite un paramètre qui correspond la personne pour lequel on recherche le nombre d'ascendance.\n");
+        } else {
+            ascendance(*l,parametre);
+        }
     } else if (estEgaleS(fonction,"gdparents")){
         if(!strlen(parametre)) {
             printf("La fonction gdparents necessite un paramètre qui correspond la personne pour lequel on recherche les grands parents.\n");
@@ -1126,17 +1453,57 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
         } else {
             ascendants(*l,parametre);
         }
+    }else if (estEgaleS(fonction,"del")){
+        if(!strlen(parametre)) {
+            printf("La fonction del necessite un paramètre qui correspond la personne à supprimer.\n");
+        } else {
+            del(*l,parametre);
+        }
+    }else if (estEgaleS(fonction,"taille_arbre")){
+        tailleArbre(*l);
+    }else if (estEgaleS(fonction,"tri_age")){
+        tri_age(*l);
     } else if (estEgaleS(fonction,"enfants")){
         if(!strlen(parametre)) {
             printf("La fonction enfants necessite un paramètre qui correspond la personne pour lequel on recherche les enfants.\n");
         } else {
             enfants(*l,parametre);
         }
+    }else if (estEgaleS(fonction,"lien")){
+        if(!strlen(parametre)) {
+            printf("La fonction lien necessite deux paramètres qui corresponde aux deux personnes du potentiel lien\n");
+        } else {
+            char* prenom1 = (char*) malloc(sizeof(char)*TAILLE_MINI);
+            char* prenom2 = (char*) malloc(sizeof(char)*TAILLE_MINI);
+            int ind = 0;
+            int indP1 = 0;
+            int indP2 = 0;
+            while (parametre[ind]!=','){
+				prenom1[indP1] = parametre[ind];
+				ind++;
+				indP1++;
+			}
+			prenom1[indP1] = '\0';
+			ind++;
+			while(parametre[ind] != '\0'){
+				prenom2[indP2] = parametre[ind];
+				ind++;
+				indP2++;
+			}
+			prenom2[indP2] = '\0';
+			lien(*l,prenom1,prenom2);
+        }
     } else if (estEgaleS(fonction,"petitsenfants")){
         if(!strlen(parametre)) {
             printf("La fonction petitsenfants necessite un paramètre qui correspond la personne pour lequel on recherche les petits enfants.\n");
         } else {
             petitsEnfants(*l,parametre);
+        }
+    }else if (estEgaleS(fonction,"recense_genre")){
+        if(!strlen(parametre)) {
+            printf("La fonction recense necessite un paramètre qui correspond au sexe à recenser\n");
+        } else {
+            recense(*l,parametre[0]);
         }
     } else if (estEgaleS(fonction,"descendants")){
         if(!strlen(parametre)) {
@@ -1230,6 +1597,8 @@ int parseCommande(Liste** l){
     printf("Fonction %s(%s)\n",fonction,parametre);
     return lanceCommande(l,fonction,parametre);
 }
+
+
 
 int main(int argc, char* argv[]){
 	/*
