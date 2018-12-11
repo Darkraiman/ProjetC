@@ -16,6 +16,17 @@ Liste* initListe(){
 	return l;
 }
 
+Liste2* initListe2(){
+	/*
+	Initialise la liste chainée qui contiendra l'arbre généalogique
+	*/
+	Liste2* l = (Liste2*) malloc(sizeof(Liste2));
+	l->premier = NULL;
+	l->dernier = NULL;
+	l->nbIndividu = 0;
+	return l;
+}
+
 char* getMere(Individu* i){
 	/*
 	Fonction renvoyant le prénom de la mère de l'individu passé en paramètre
@@ -115,6 +126,7 @@ Liste* load(char* nomFichier){
 			char *mere=malloc(sizeof(char)*TAILLE_MINI);
 			char *dateN=malloc(sizeof(char)*TAILLE_MINI);
 			char *dateM=malloc(sizeof(char)*TAILLE_MINI);
+			char *naissance=malloc(sizeof(char)*TAILLE_MINI);
 			char sexe=0;
 			long date = 0;
 			long dateMort = 0;
@@ -164,7 +176,7 @@ Liste* load(char* nomFichier){
 
             current=fgetc(fichier);
             i=0;
-            while(current!='\n'){
+            while(current!=','){
                 dateM[i++]=current;
                 current=fgetc(fichier);
             }
@@ -174,6 +186,13 @@ Liste* load(char* nomFichier){
                 dateMort = strtol(dateM,&fin,10);
             }
             free(dateM);
+            current=fgetc(fichier);
+            i=0;
+			while(current!='\n'){
+				naissance[i++]=current;
+				current=fgetc(fichier);
+			}
+			naissance[i]='\0';
 			//Free
 			if(pere[0]=='\0'){
 				free(pere);
@@ -183,7 +202,11 @@ Liste* load(char* nomFichier){
 				free(mere);
 				mere=NULL;
 			}
-			ajouter(new, prenom, sexe, pere, mere,date,dateMort);
+			if(naissance[0]=='\0'){
+                free(naissance);
+                naissance=NULL;
+			}
+			ajouter(new, prenom, sexe, pere, mere,date,dateMort,naissance);
 			current = fgetc(fichier);
 		}
 		fclose(fichier);
@@ -194,7 +217,7 @@ Liste* load(char* nomFichier){
 	}
 }
 
-int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere,long date,long dateMort){
+int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere,long date,long dateMort,char* naissance){
 	/*
 	Fonction permettant d'ajouter un nouveau membre de la famille
 
@@ -258,6 +281,9 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere,long date,
 	}
 	i->date = date;
 	i->dateMort = dateMort;
+	i->naissance = naissance;
+	tri_age2(ordreAge);
+	tri_date(ordreNaiss);
 	Individu* iPere = NULL;
 	Individu* iMere = NULL;
 	Element* rac = l->premier;
@@ -331,6 +357,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere,long date,
 		nouveau->date = 0;
 		nouveau->dateMort = 0;
 		i->pere = nouveau;
+		ajouterOrdre(nouveau);
 		l->nbIndividu++;
 	}
 	if (!trouveMere && mere!=NULL){
@@ -343,6 +370,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere,long date,
 		nouveau->date = 0;
 		nouveau->dateMort = 0;
 		i->mere = nouveau;
+		ajouterOrdre(nouveau);
 		l->nbIndividu++;
 	}
 	if (!trouve){
@@ -355,6 +383,7 @@ int ajouter(Liste* l, char* prenom, char sexe, char* pere, char* mere,long date,
 			} else {
 				l->premier = nouv;
 			}
+			ajouterOrdre(i);
 			l->nbIndividu++;
 		}
 	} else {
@@ -515,9 +544,9 @@ void saveFamille(FILE* fichier, Individu* i,char** dejaFait,int* taille){
 void savePersonne(FILE* fichier,Individu* i,char** dejaFait,int* taille){
 	if (!inChar(dejaFait,i->prenom,taille)){
 		if (!i->sexe){
-			fprintf(fichier,"%s:,%s,%s,%ld,%ld\n",i->prenom,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort);
+			fprintf(fichier,"%s:,%s,%s,%ld,%ld,%s\n",i->prenom,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort,(!i->naissance?"":i->naissance));
 		}else {
-			fprintf(fichier,"%s:%c,%s,%s,%ld,%ld\n",i->prenom,i->sexe,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort);
+			fprintf(fichier,"%s:%c,%s,%s,%ld,%ld,%s\n",i->prenom,i->sexe,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort,(!i->naissance?"":i->naissance));
 		}
 		dejaFait[(*taille)++] = i->prenom;
 	}
@@ -539,9 +568,9 @@ void save(Liste* l, char* nomFichier){
 void viewPersonne(Individu* i,char** dejaFait,int* taille){
 	if (!inChar(dejaFait,i->prenom,taille)){
 		if (!i->sexe){
-			printf("%s:,%s,%s,%ld,%ld\n",i->prenom,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort);
+			printf("%s:,%s,%s,%ld,%ld,%s\n",i->prenom,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort,(i->naissance?i->naissance:""));
 		}else {
-			printf("%s:%c,%s,%s,%ld,%ld\n",i->prenom,i->sexe,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort);
+			printf("%s:%c,%s,%s,%ld,%ld,%s\n",i->prenom,i->sexe,(!i->pere?"":getPere(i)),(!i->mere?"":getMere(i)),i->date,i->dateMort,(i->naissance?i->naissance:""));
 		}
 		dejaFait[(*taille)++] = i->prenom;
 	}
@@ -565,12 +594,80 @@ void view(Liste* l){
 		rac=rac->suivant;
 	}
 }
+void ajouterOrdre(Individu* i){
+    ajouterOrdreAge(i);
+    ajouterOrdreNaiss(i);
+    ajouterOrdreAlpha(i);
+}
 
-void test(Liste* l, char* nom, char sexe, char* pere, char* mere,long date,long dateMort){
+void ajouterOrdreAge(Individu* i){
+    Element2* nouv = (Element2*) malloc(sizeof(Element2));
+    nouv->personne = i;
+    nouv->prec = NULL;
+    nouv->suivant = NULL;
+    if (ordreAge->premier == NULL){
+        ordreAge->premier = nouv;
+        ordreAge->dernier = nouv;
+    } else {
+        nouv->prec = ordreAge->dernier;
+        ordreAge->dernier->suivant = nouv;
+        ordreAge->dernier = nouv;
+    }
+    tri_age2(ordreAge);
+}
+
+void ajouterOrdreNaiss(Individu* i){
+    Element2* nouv = (Element2*) malloc(sizeof(Element2));
+    nouv->personne = i;
+    nouv->prec = NULL;
+    nouv->suivant = NULL;
+    if (ordreNaiss->premier == NULL){
+        ordreNaiss->premier = nouv;
+        ordreNaiss->dernier = nouv;
+    } else {
+        nouv->prec = ordreNaiss->dernier;
+        ordreNaiss->dernier->suivant = nouv;
+        ordreNaiss->dernier = nouv;
+    }
+    tri_date(ordreNaiss);
+}
+
+void ajouterOrdreAlpha(Individu* i){
+    Element2* nouv = (Element2*) malloc(sizeof(Element2));
+    nouv->personne = i;
+    nouv->prec = NULL;
+    nouv->suivant = NULL;
+    if (ordreAlpha->premier == NULL){
+        ordreAlpha->premier = nouv;
+        ordreAlpha->dernier = nouv;
+    } else {
+        Element2* rac = ordreAlpha->premier;
+        if (strcmp(i->prenom,rac->personne->prenom)==-1){
+            ordreAlpha->premier->prec = nouv;
+            nouv->suivant=ordreAlpha->premier;
+            ordreAlpha->premier=nouv;
+            return;
+        }
+        while (rac->suivant!=NULL){
+            if (strcmp(i->prenom,rac->suivant->personne->prenom)==-1){
+                nouv->suivant = rac->suivant;
+                nouv->prec = rac;
+                rac->suivant = nouv;
+                return;
+            }
+            rac=rac->suivant;
+        }
+        nouv->prec = rac;
+        rac->suivant = nouv;
+        ordreAlpha->dernier = nouv;
+    }
+}
+
+void test(Liste* l, char* nom, char sexe, char* pere, char* mere,long date,long dateMort,char* naissance){
 	/*
 	Fonction de test qui récupère les erreurs et les affiche dans la console
 	*/
-	int codeExec = ajouter(l,nom,sexe,pere,mere,date,dateMort);
+	int codeExec = ajouter(l,nom,sexe,pere,mere,date,dateMort,naissance);
 	switch (codeExec){
 		case 0:
 			printf("Tout s'est bien passe !\n");
@@ -641,14 +738,19 @@ void afficheInfo(Individu* i){
 	printf("Information sur %s :\n",i->prenom);
 	printf("Sexe : ");
 	if (i->sexe ==0){
-		printf("%s\n","Non défini");
+		printf("Non défini\n");
 	}else {
 		printf("%c\n",i->sexe);
 	}
 	printf("Père : %s\n",(i->pere==NULL?"Non disponible":i->pere->prenom));
 	printf("Mère : %s\n",(i->mere==NULL?"Non disponible":i->mere->prenom));
 	printf("Date de naissance : %ld\n",i->date);
-	printf("Date de décès : %ld\n",i->dateMort);
+	if (i->dateMort){
+        printf("Date de décès : %ld\n",i->dateMort);
+	} else {
+        printf("Date de décès : Encore vivant\n");
+	}
+	printf("Lieu de naissance : %s\n",(i->naissance==NULL?"Non disponible":i->naissance));
 }
 
 void retrouveMere(Liste* l, char* prenom){
@@ -1270,6 +1372,113 @@ Element* chercheMin(Liste* l){
     return min;
 }
 
+Element2* chercheMin2(Liste2* l){
+    Element2* rac = l->premier;
+    if (rac==NULL){
+        return NULL;
+    }
+    Element2* min = l->premier;
+    while (rac!=NULL){
+        if (min->personne->date > rac->personne->date){
+            min=rac;
+        }
+        rac=rac->suivant;
+    }
+    return min;
+}
+
+Element2* chercheMin3(Liste2* l){
+    Element2* rac = l->premier;
+    if (rac==NULL){
+        return NULL;
+    }
+    struct tm* info;
+    time_t temps;
+    time(&temps);
+    info = localtime(&temps);
+    long actuel = info->tm_mday + 100* (info->tm_mon+1)+10000*(info->tm_year+1900);
+    int ageMin;
+    if (rac->personne->dateMort){
+        ageMin = rac->personne->dateMort - rac->personne->date;
+    } else {
+        ageMin = actuel - rac->personne->date;
+    }
+
+    Element2* min = l->premier;
+    int ageEnCours;
+    while (rac!=NULL){
+        if (rac->personne->dateMort){
+            ageEnCours = rac->personne->dateMort - rac->personne->date;
+        } else {
+            ageEnCours = actuel - rac->personne->date;
+        }
+        if (ageEnCours < ageMin){
+            min=rac;
+            ageMin=ageEnCours;
+        }
+        rac=rac->suivant;
+    }
+    return min;
+}
+
+void ajouteListeChainee2(Liste2* l, Element2* e){
+    e->suivant=NULL;
+    if (l->premier == NULL){
+        e->prec = NULL;
+        l->premier = e;
+        l->dernier = e;
+    } else {
+        e->prec = l->dernier;
+        l->dernier->suivant = e;
+        l->dernier = e;
+    }
+}
+
+int supprimerSansFree2(Liste2* l, Element2* e){
+	/*
+	Fonction qui supprimer l'element e dans la liste l passé en paramètre
+	*/
+	if (l->premier == e){
+		l->premier = e->suivant;
+		return 0;
+	}
+	Element2* rac = l->premier;
+	Element2* prec = NULL;
+	while (rac!=NULL){
+		if (rac==e){
+			prec->suivant = e->suivant;
+			return 0;
+		}
+		prec = rac;
+		rac = rac->suivant;
+	}
+	return 1;
+}
+
+void tri_date(Liste2* l){
+    Liste2* nouv = (Liste2*) malloc(sizeof(Liste2));
+    nouv->premier=NULL;
+    Element2* min;
+    while(l->premier!=NULL){
+        min = chercheMin2(l);
+        supprimerSansFree2(l,min);
+        ajouteListeChainee2(nouv,min);
+    }
+    *l=*nouv;
+}
+
+void tri_age2(Liste2* l){
+    Liste2* nouv = (Liste2*) malloc(sizeof(Liste2));
+    nouv->premier=NULL;
+    Element2* min;
+    while(l->premier!=NULL){
+        min = chercheMin3(l);
+        supprimerSansFree2(l,min);
+        ajouteListeChainee2(nouv,min);
+    }
+    *l=*nouv;
+}
+
 void ajouteListeChainee(Liste* l, Element* e){
     e->suivant=NULL;
     if (!l->premier){
@@ -1295,6 +1504,106 @@ void tri_age(Liste* l){
     *l=*nouv;
 }
 
+void deces(Liste* l, char* prenom,long date){
+    Individu* test = cherche(l,prenom);
+    if (!(test)){
+        printf("La personne donnée n'existe pas !\n");
+    } else {
+        test->dateMort = date;
+        tri_age2(ordreAge);
+    }
+}
+
+void aines(long age){
+    age = age*10000;
+    Element2* rac = ordreAge->dernier;
+    if (rac==NULL){
+        printf("Il n'y a pas de personne plus agé !");
+        return;
+    }
+    struct tm* info;
+    time_t temps;
+    time(&temps);
+    info = localtime(&temps);
+    long actuel = info->tm_mday + 100* (info->tm_mon+1)+10000*(info->tm_year+1900);
+    long ageActu;
+    if (rac->personne->dateMort){
+        ageActu = rac->personne->dateMort - rac->personne->date;
+    } else {
+        ageActu = actuel - rac->personne->date;
+    }
+    while (rac!=NULL && ageActu >= age){
+        if (rac->personne->dateMort){
+            ageActu = rac->personne->dateMort - rac->personne->date;
+        } else {
+            ageActu = actuel - rac->personne->date;
+        }
+        if (rac->personne->date){
+            printf("%s\n",rac->personne->prenom);
+        }
+        rac=rac->prec;
+    }
+}
+
+void benjamins(int age){
+    age = age*10000;
+    Element2* rac = ordreAge->premier;
+    if (rac==NULL){
+        printf("Il n'y a pas de personne plus agé !");
+        return;
+    }
+    struct tm* info;
+    time_t temps;
+    time(&temps);
+    info = localtime(&temps);
+    long actuel = info->tm_mday + 100* (info->tm_mon+1)+10000*(info->tm_year+1900);
+    long ageActu;
+    if (rac->personne->dateMort){
+        ageActu = rac->personne->dateMort - rac->personne->date;
+    } else {
+        ageActu = actuel - rac->personne->date;
+    }
+    while (rac!=NULL && ageActu < age){
+        if (rac->personne->dateMort){
+            ageActu = rac->personne->dateMort - rac->personne->date;
+        } else {
+            ageActu = actuel - rac->personne->date;
+        }
+        if (rac->personne->date){
+            printf("%s\n",rac->personne->prenom);
+        }
+        rac=rac->suivant;
+    }
+}
+
+void chronologie(){
+    Element2* rac = ordreNaiss->premier;
+    while(rac!=NULL){
+        if (rac->personne->date){
+            printf("%s\n",rac->personne->prenom);
+        }
+        rac=rac->suivant;
+    }
+}
+
+void remonteTemps(){
+    Element2* rac = ordreNaiss->dernier;
+    while(rac!=NULL){
+        if (rac->personne->date){
+            printf("%s\n",rac->personne->prenom);
+        }
+        rac=rac->prec;
+    }
+}
+
+void annuaire(){
+    Element2* rac = ordreAlpha->premier;
+    while(rac!=NULL){
+        printf("%s\n",rac->personne->prenom);
+        rac=rac->suivant;
+    }
+}
+
 int lanceCommande(Liste** l,char* fonction, char* parametre){
     /*
 	Fonction qui à partir du nom de fonction et des paramètres, lance les fonctions correspondantes
@@ -1317,6 +1626,12 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
         }
     } else if (estEgaleS(fonction,"view")){
         view(*l);
+    } else if (estEgaleS(fonction,"chronologie")){
+        chronologie();
+    } else if (estEgaleS(fonction,"remonteTemps")){
+        remonteTemps();
+    } else if (estEgaleS(fonction,"annuaire")){
+        annuaire();
     } else if (estEgaleS(fonction,"exit")){
         return 1;
     } else if (estEgaleS(fonction,"new")){
@@ -1330,6 +1645,7 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
             char* mere;
             char* date;
             char* dateMort;
+            char* naissance;
             int taillemax = strlen(parametre);
             int indCha = 0;
             int ind = 0;
@@ -1338,7 +1654,7 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
             }
             prenom[indCha]='\0';
             if (ind>=taillemax){
-                test(*l,prenom,0,NULL,NULL,0,0);
+                test(*l,prenom,0,NULL,NULL,0,0,NULL);
                 return 0;
             }
             ind++;
@@ -1396,7 +1712,18 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
                 dateMort[indCha]='\0';
             }
             long dateMortL = strtol(dateMort,&fin,10);
-            test(*l,prenom,sexe,pere,mere,dateL,dateMortL);
+            ind++;
+            indCha = 0;
+            if (ind >= taillemax||parametre[ind]==','){
+                naissance = NULL;
+            } else {
+                naissance = (char*) malloc(sizeof(char)*100);
+                while (ind<taillemax && parametre[ind] != ','){
+                    naissance[indCha++]=parametre[ind++];
+                }
+                naissance[indCha]='\0';
+            }
+            test(*l,prenom,sexe,pere,mere,dateL,dateMortL,naissance);
             tri_age(*l);
         }
     } else if (estEgaleS(fonction,"info")){
@@ -1410,6 +1737,22 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
             printf("La fonction mere necessite un paramètre qui correspond la personne pour lequel on recherche la mere.\n");
         } else {
             retrouveMere(*l,parametre);
+        }
+    }else if (estEgaleS(fonction,"aines")){
+        if(!strlen(parametre)) {
+            printf("La fonction aines necessite un paramètre qui corresponde à l'âge minimum à atteindre\n");
+        } else {
+            char* fin;
+            long age = strtol(parametre,&fin,10);
+            aines(age);
+        }
+    }else if (estEgaleS(fonction,"benjamins")){
+        if(!strlen(parametre)) {
+            printf("La fonction benjamins necessite un paramètre qui corresponde à l'âge maximum à atteindre\n");
+        } else {
+            char* fin;
+            long age = strtol(parametre,&fin,10);
+            benjamins(age);
         }
     } else if (estEgaleS(fonction,"pere")){
         if(!strlen(parametre)) {
@@ -1492,6 +1835,32 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
 			}
 			prenom2[indP2] = '\0';
 			lien(*l,prenom1,prenom2);
+        }
+    }else if (estEgaleS(fonction,"deces")){
+        if(!strlen(parametre)) {
+            printf("La fonction deces necessite deux paramètres prenom et nouvelleDate qui correspondent à la personne qe l'on souhaite modifier et à la nouvelle date à assigner\n");
+        } else {
+            char* prenom = (char*) malloc(sizeof(char)*TAILLE_MINI);
+            char* nouvelleDate = (char*) malloc(sizeof(char)*TAILLE_MINI);
+            int ind = 0;
+            int indP1 = 0;
+            int indP2 = 0;
+            while (parametre[ind]!=','){
+				prenom[indP1] = parametre[ind];
+				ind++;
+				indP1++;
+			}
+			prenom[indP1] = '\0';
+			ind++;
+			while(parametre[ind] != '\0'){
+				nouvelleDate[indP2] = parametre[ind];
+				ind++;
+				indP2++;
+			}
+			nouvelleDate[indP2] = '\0';
+			char* fin;
+			long nouvDate = strtol(nouvelleDate,&fin,10);
+			deces(*l,prenom,nouvDate);
         }
     } else if (estEgaleS(fonction,"petitsenfants")){
         if(!strlen(parametre)) {
@@ -1598,6 +1967,16 @@ int parseCommande(Liste** l){
     return lanceCommande(l,fonction,parametre);
 }
 
+void afficheListe2(Liste2* l){
+    Element2* rac = l->premier;
+    printf("DEBUT-");
+    while (rac!= NULL){
+        printf("[%s]-",rac->personne->prenom);
+        rac=rac->suivant;
+    }
+    printf("NULL\n");
+}
+
 
 
 int main(int argc, char* argv[]){
@@ -1605,6 +1984,9 @@ int main(int argc, char* argv[]){
 	Fonction principal du module
 	*/
 	Liste* l = initListe();
+	ordreAge = initListe2();
+	ordreAlpha = initListe2();
+	ordreNaiss = initListe2();
 	int fini = 0;
 	while (!fini){
         fini = parseCommande(&l);

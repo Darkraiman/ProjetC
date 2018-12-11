@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 typedef struct individu Individu;
 typedef struct element Element;
+typedef struct element2 Element2;
 typedef struct liste Liste;
+typedef struct liste2 Liste2;
 
 struct individu {
 	char* prenom;
@@ -13,19 +16,34 @@ struct individu {
 	Individu* mere;
 	long date;
 	long dateMort;
+	char* naissance;
 };
 
-struct element
-{
+struct element{
     	Individu* personne;
     	Element *suivant;
 };
 
-struct liste
-{
+struct element2{
+    	Individu* personne;
+    	Element2 *suivant;
+    	Element2 *prec;
+};
+
+struct liste{
     	Element *premier;
     	int nbIndividu;
 };
+
+struct liste2{
+    	Element2 *premier;
+    	Element2 *dernier;
+    	int nbIndividu;
+};
+
+Liste2* ordreNaiss;
+Liste2* ordreAge;
+Liste2* ordreAlpha;
 
 void afficheArbre(Individu* i);
 
@@ -43,7 +61,15 @@ void affilie(Liste* l, char* prenom,char sexe, int demi);
 
 void affilieParent(Liste* l,char* prenom,char sexe);
 
-int ajouter(Liste* l,char* prenom,char sexe,char* pere,char* mere,long date,long dateMort);
+int ajouter(Liste* l,char* prenom,char sexe,char* pere,char* mere,long date,long dateMort,char* naissance);
+
+void ajouterOrdre(Individu* i);
+
+void ajouterOrdreAge(Individu* i);
+
+void ajouterOrdreNaiss(Individu* i);
+
+void ajouterOrdreAlpha(Individu* i);
 
 void ascendants(Liste* l,char* prenom);
 
@@ -119,9 +145,13 @@ int supprimer(Liste* l, Element* e);
 
 int supprimeTab(Individu** tab,int indiceASupp,int taille);
 
-void test(Liste* l, char* nom, char sexe, char*pere, char* mere,long date,long dateMort);
+void test(Liste* l, char* nom, char sexe, char*pere, char* mere,long date,long dateMort,char* naissance);
 
 void transformeNom(char* prenom);
+
+void tri_age2(Liste2* l);
+
+void tri_date(Liste2* l);
 
 void viderBuffer();
 
