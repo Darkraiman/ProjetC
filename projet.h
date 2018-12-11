@@ -103,6 +103,14 @@ int estEgaleS(char* ch1,char* ch2);
 
 int estSexeValide(char sexe);
 
+void freeElement(Element* e);
+
+void freeIndividu(Individu* i);
+
+void freeListe(Liste* l);
+
+void freeListe2(Liste2* l);
+
 char* getMere(Individu* i);
 
 char* getPere(Individu* i);
