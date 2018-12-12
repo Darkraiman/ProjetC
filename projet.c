@@ -151,7 +151,6 @@ Liste* load(char* nomFichier){
 			}
 			prenom[i]='\0';
 			current=fgetc(fichier);
-
 			//Lecture du sexe
 			while(current!=','){
 				sexe=current;
@@ -187,7 +186,6 @@ Liste* load(char* nomFichier){
                 date = strtol(dateN,&fin,10);
             }
             free(dateN);
-
             current=fgetc(fichier);
             i=0;
             while(current!=','){
@@ -226,6 +224,7 @@ Liste* load(char* nomFichier){
 		fclose(fichier);
 		return new;
 	} else {
+		free(new);
         printf("Fichier inexistant ou problème dans son ouverture !");
         return NULL;
 	}
@@ -1871,9 +1870,9 @@ int lanceCommande(Liste** l,char* fonction, char* parametre){
                 dateMort[indCha]='\0';
             }
             long dateMortL = strtol(dateMort,&fin,10);
-            if (dateMortL){
-                free(dateMort);
-            }
+            if(dateMortL || dateMort[0]=='\0'){
+				free(dateMort);
+			}
             ind++;
             indCha = 0;
             if (ind >= taillemax||parametre[ind]==','){
