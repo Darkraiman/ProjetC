@@ -1,5 +1,5 @@
 # ProjetC
 Projet de C (Arbre Généalogique)
 
-Le fichier .zip est le fichier à rendre !!!
+LE FICHIER A RENDRE CEST projetFinalPouillyThelliez.zip
 
